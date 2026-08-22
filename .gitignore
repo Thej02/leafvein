@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environment
+venv/
+env/
+.env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data — keep sample images for tests, exclude large raw datasets
+# Uncomment the next line if raw images become too large for the repo:
+# data/raw/*.jpg
+# data/raw/*.jpeg
+# data/raw/*.png
+
+# Debug overlays (regenerable)
+data/reference/_debug_overlays/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/

@@ -1,0 +1,341 @@
+"""
+src/feature_extraction.py — Feature extraction from segmented leaf images.
+
+Extracts two categories of features:
+
+**From backlit image (vein features):**
+  - vein_density: skeleton pixels / leaf area
+  - vein_thickness_avg: average vein width via distance transform
+  - branch_point_count: proxy for branching complexity
+
+**From front-lit image (color/chlorosis features):**
+  - mean_hue, mean_saturation: overall greenness proxies
+  - yellow_pixel_ratio: fraction of leaf in the "yellow/pale" HSV band
+  - excess_green_index (ExG): 2G − R − B, normalized, averaged over leaf
+  - dark_green_color_index (DGCI): standard turf/plant-health formula
+  - interveinal_contrast: color difference between on-vein and off-vein regions
+
+Every function is independently testable and produces deterministic output.
+No machine learning is used.
+"""
+
+import cv2
+import numpy as np
+import sys
+import os
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from config.thresholds import YELLOW_HSV_LOWER, YELLOW_HSV_UPPER
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Vein-based features (from backlit image)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def compute_vein_density(vein_pixel_count: int, leaf_area_pixels: int) -> float:
+    """
+    Compute vein density as the ratio of vein skeleton pixels to leaf area.
+
+    Higher vein density generally indicates healthier, more robust vascular
+    architecture. Deficiency may cause reduced vein visibility.
+
+    Args:
+        vein_pixel_count: Number of pixels in the vein skeleton.
+        leaf_area_pixels: Total number of leaf pixels (from segmentation mask).
+
+    Returns:
+        Vein density ratio (0.0 to 1.0, typically 0.01–0.10 for real leaves).
+    """
+    if leaf_area_pixels == 0:
+        return 0.0
+    return vein_pixel_count / leaf_area_pixels
+
+
+def compute_vein_thickness(vein_mask: np.ndarray, skeleton: np.ndarray) -> float:
+    """
+    Estimate average vein thickness using distance transform.
+
+    The distance transform of the binary vein mask gives, at each vein pixel,
+    the distance to the nearest non-vein pixel. Sampling this along the skeleton
+    (centerline) gives the half-width of the vein at each point.
+
+    Args:
+        vein_mask: Binary vein mask (pre-skeletonization, uint8, 0 or 255).
+        skeleton: Binary vein skeleton (uint8, 0 or 255).
+
+    Returns:
+        Average vein thickness in pixels (diameter = 2 × distance transform value).
+        Returns 0.0 if no skeleton pixels exist.
+    """
+    if cv2.countNonZero(skeleton) == 0:
+        return 0.0
+
+    # Distance transform on the vein mask
+    dist_transform = cv2.distanceTransform(vein_mask, cv2.DIST_L2, 5)
+
+    # Sample distances along skeleton pixels
+    skeleton_coords = skeleton > 0
+    distances = dist_transform[skeleton_coords]
+
+    if len(distances) == 0:
+        return 0.0
+
+    # Average thickness = 2 × mean half-width
+    return float(2.0 * np.mean(distances))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Color-based features (from front-lit image)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def compute_mean_hue_saturation(image: np.ndarray, mask: np.ndarray) -> dict:
+    """
+    Compute mean hue and saturation of the leaf region in HSV space.
+
+    Hue indicates color (green vs yellow vs brown), saturation indicates
+    color intensity (vivid green vs washed-out pale).
+
+    Args:
+        image: Front-lit BGR image.
+        mask: Binary leaf mask (uint8, 0 or 255).
+
+    Returns:
+        Dict with 'mean_hue' (0–180) and 'mean_saturation' (0–255).
+    """
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    leaf_pixels = mask > 0
+
+    if not np.any(leaf_pixels):
+        return {'mean_hue': 0.0, 'mean_saturation': 0.0}
+
+    hue_values = hsv[:, :, 0][leaf_pixels]
+    sat_values = hsv[:, :, 1][leaf_pixels]
+
+    return {
+        'mean_hue': float(np.mean(hue_values)),
+        'mean_saturation': float(np.mean(sat_values)),
+    }
+
+
+def compute_yellow_pixel_ratio(image: np.ndarray, mask: np.ndarray,
+                                yellow_lower: tuple = YELLOW_HSV_LOWER,
+                                yellow_upper: tuple = YELLOW_HSV_UPPER) -> float:
+    """
+    Compute the fraction of leaf pixels that fall in the "yellow/pale" HSV band.
+
+    This is a direct proxy for chlorosis (yellowing). A healthy leaf should
+    have very few yellow pixels; a deficient leaf may have a large fraction.
+
+    Args:
+        image: Front-lit BGR image.
+        mask: Binary leaf mask (uint8, 0 or 255).
+        yellow_lower: Lower HSV bound for yellow detection.
+        yellow_upper: Upper HSV bound for yellow detection.
+
+    Returns:
+        Ratio of yellow pixels to total leaf pixels (0.0 to 1.0).
+    """
+    leaf_area = cv2.countNonZero(mask)
+    if leaf_area == 0:
+        return 0.0
+
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    yellow_mask = cv2.inRange(hsv, np.array(yellow_lower), np.array(yellow_upper))
+
+    # Only count yellow pixels within the leaf
+    yellow_in_leaf = cv2.bitwise_and(yellow_mask, mask)
+    yellow_count = cv2.countNonZero(yellow_in_leaf)
+
+    return yellow_count / leaf_area
+
+
+def compute_excess_green_index(image: np.ndarray, mask: np.ndarray) -> float:
+    """
+    Compute the Excess Green Index (ExG) averaged over leaf pixels.
+
+    ExG = 2G − R − B (using normalized RGB: r = R/(R+G+B), etc.)
+
+    ExG is a well-established vegetation color index in precision agriculture.
+    Positive values indicate green vegetation; lower values indicate
+    reduced greenness (yellowing, browning).
+
+    Args:
+        image: Front-lit BGR image.
+        mask: Binary leaf mask (uint8, 0 or 255).
+
+    Returns:
+        Mean ExG across leaf pixels (typically -1.0 to +1.0).
+    """
+    leaf_pixels = mask > 0
+    if not np.any(leaf_pixels):
+        return 0.0
+
+    # Extract BGR channels as float
+    b = image[:, :, 0].astype(np.float64)
+    g = image[:, :, 1].astype(np.float64)
+    r = image[:, :, 2].astype(np.float64)
+
+    # Normalize to chromatic coordinates
+    total = r + g + b + 1e-10  # avoid division by zero
+    r_norm = r / total
+    g_norm = g / total
+    b_norm = b / total
+
+    # ExG = 2g − r − b (where g, r, b are normalized)
+    exg = 2.0 * g_norm - r_norm - b_norm
+
+    # Average over leaf pixels only
+    return float(np.mean(exg[leaf_pixels]))
+
+
+def compute_dgci(image: np.ndarray, mask: np.ndarray) -> float:
+    """
+    Compute the Dark Green Color Index (DGCI) averaged over leaf pixels.
+
+    DGCI = [(Hue − 60)/60 + (1 − Saturation) + (1 − Brightness)] / 3
+
+    Where Hue is in degrees (0–360), Saturation and Brightness are 0–1.
+
+    DGCI was developed for turfgrass color assessment and correlates with
+    nitrogen status. Higher DGCI = darker green = healthier.
+
+    Reference: Karcher & Richardson (2003), "Quantifying Turfgrass Color
+    Using Digital Image Analysis" — Crop Science 43:943–951.
+
+    Args:
+        image: Front-lit BGR image.
+        mask: Binary leaf mask (uint8, 0 or 255).
+
+    Returns:
+        Mean DGCI across leaf pixels (0.0 to 1.0, higher = darker green).
+    """
+    leaf_pixels = mask > 0
+    if not np.any(leaf_pixels):
+        return 0.0
+
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+
+    # OpenCV HSV ranges: H=0–180, S=0–255, V=0–255
+    # Convert to standard ranges: H=0–360, S=0–1, V=0–1
+    h = hsv[:, :, 0].astype(np.float64) * 2.0      # 0–360
+    s = hsv[:, :, 1].astype(np.float64) / 255.0     # 0–1
+    v = hsv[:, :, 2].astype(np.float64) / 255.0     # 0–1
+
+    # DGCI formula
+    hue_component = (h - 60.0) / 60.0
+    sat_component = 1.0 - s
+    val_component = 1.0 - v
+
+    dgci = (hue_component + sat_component + val_component) / 3.0
+
+    return float(np.mean(dgci[leaf_pixels]))
+
+
+def compute_interveinal_contrast(image: np.ndarray,
+                                   mask: np.ndarray,
+                                   skeleton: np.ndarray,
+                                   dilation_radius: int = 10) -> float:
+    """
+    Compute the color contrast between on-vein and off-vein (interveinal) regions.
+
+    A classic symptom of Mg/Fe deficiency is that veins stay green while the
+    tissue between veins yellows. This feature captures that pattern as a
+    numeric difference in mean green channel intensity.
+
+    Args:
+        image: Front-lit BGR image.
+        mask: Binary leaf mask (uint8, 0 or 255).
+        skeleton: Binary vein skeleton from the backlit image analysis (uint8, 0 or 255).
+        dilation_radius: How many pixels around each skeleton pixel to consider
+                        as "on-vein" region.
+
+    Returns:
+        Absolute difference in mean green-channel intensity between on-vein
+        and off-vein leaf regions. Higher values suggest interveinal chlorosis.
+        Returns 0.0 if either region is empty.
+    """
+    if cv2.countNonZero(skeleton) == 0 or cv2.countNonZero(mask) == 0:
+        return 0.0
+
+    # Dilate skeleton to create "on-vein" region (wider than 1 pixel)
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,
+                                       (dilation_radius * 2 + 1, dilation_radius * 2 + 1))
+    vein_region = cv2.dilate(skeleton, kernel, iterations=1)
+
+    # On-vein = vein region ∩ leaf mask
+    on_vein_mask = cv2.bitwise_and(vein_region, mask)
+
+    # Off-vein = leaf mask − on-vein
+    off_vein_mask = cv2.bitwise_and(mask, cv2.bitwise_not(vein_region))
+
+    on_vein_pixels = on_vein_mask > 0
+    off_vein_pixels = off_vein_mask > 0
+
+    if not np.any(on_vein_pixels) or not np.any(off_vein_pixels):
+        return 0.0
+
+    # Compare green channel (index 1 in BGR)
+    green = image[:, :, 1].astype(np.float64)
+
+    mean_green_on_vein = np.mean(green[on_vein_pixels])
+    mean_green_off_vein = np.mean(green[off_vein_pixels])
+
+    return float(abs(mean_green_on_vein - mean_green_off_vein))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Combined feature extraction
+# ─────────────────────────────────────────────────────────────────────────────
+
+def extract_all_features(frontlit_image: np.ndarray,
+                          mask: np.ndarray,
+                          vein_result: dict,
+                          leaf_area_pixels: int) -> dict:
+    """
+    Extract all features from both the backlit (via vein_result) and front-lit images.
+
+    This is the main entry point for feature extraction.
+
+    Args:
+        frontlit_image: Preprocessed BGR front-lit leaf image.
+        mask: Binary leaf mask (uint8, 0 or 255).
+        vein_result: Output dict from vein_extraction.extract_veins(), containing:
+                     'skeleton', 'vein_mask', 'vein_pixel_count', 'branch_point_count'.
+        leaf_area_pixels: Total leaf area in pixels (from segmentation).
+
+    Returns:
+        Dict of all extracted feature values.
+    """
+    # Vein features (from backlit analysis results)
+    vein_density = compute_vein_density(
+        vein_result['vein_pixel_count'], leaf_area_pixels
+    )
+    vein_thickness = compute_vein_thickness(
+        vein_result['vein_mask'], vein_result['skeleton']
+    )
+
+    # Color features (from front-lit image)
+    hue_sat = compute_mean_hue_saturation(frontlit_image, mask)
+    yellow_ratio = compute_yellow_pixel_ratio(frontlit_image, mask)
+    exg = compute_excess_green_index(frontlit_image, mask)
+    dgci = compute_dgci(frontlit_image, mask)
+    interveinal = compute_interveinal_contrast(
+        frontlit_image, mask, vein_result['skeleton']
+    )
+
+    return {
+        # Vein features
+        'vein_density': vein_density,
+        'vein_thickness_avg': vein_thickness,
+        'branch_point_count': vein_result['branch_point_count'],
+        'vein_pixel_count': vein_result['vein_pixel_count'],
+        'leaf_area_pixels': leaf_area_pixels,
+
+        # Color features
+        'mean_hue': hue_sat['mean_hue'],
+        'mean_saturation': hue_sat['mean_saturation'],
+        'yellow_pixel_ratio': yellow_ratio,
+        'excess_green_index': exg,
+        'dgci': dgci,
+        'interveinal_contrast': interveinal,
+    }

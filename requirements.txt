@@ -1,0 +1,19 @@
+# Core image processing
+opencv-python>=4.8.0
+numpy>=1.24.0
+scikit-image>=0.21.0    # skeletonize, frangi — classical morphology, not ML
+
+# Visualization & calibration
+matplotlib>=3.7.0
+
+# Configuration
+pyyaml>=6.0
+
+# Testing
+pytest>=7.4.0
+
+# CLI
+argparse              # stdlib, listed for documentation
+
+# Report generation (optional, for HTML reports)
+jinja2>=3.1.0
