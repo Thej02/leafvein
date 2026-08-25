@@ -3,9 +3,9 @@
 ======================================================================
 
   Image ID:      2
-  Date:          2026-08-25 08:24:10
+  Date:          2026-08-25 08:47:34
   Verdict:       Leaf Health Status: NOT HEALTHY
-  Signals:       4 feature(s) flagged
+  Signals:       5 feature(s) flagged
 
 ----------------------------------------------------------------------
   SEGMENTATION QUALITY
@@ -18,8 +18,8 @@
 ----------------------------------------------------------------------
 
   Vein Architecture (Secondary Factors):
-    * Vein density:          0.035958  (Fail if < 0.040000)
-    * Vein thickness (avg):  8.26 px (Fail if > 8.00)
+    * Vein density:          0.035958  (Fail if < 0.050208)
+    * Vein thickness (avg):  8.26 px (Fail if > 7.65)
     * Branch points:         2099
     * Vein pixels:           19,538
     * Leaf area:             543,360 px
@@ -27,11 +27,11 @@
   Color / Chlorosis (Primary Factors):
     * Mean hue:              40.7
     * Mean saturation:       181.8
-    * Yellow pixel ratio:    76.46%  (Fail if > 35.00%)
-    * Excess Green Index:    0.560267  (Fail if < 0.500000)
-    * DGCI:                  0.360808  (Fail if < 0.450000)
-    * Interveinal contrast:  37.6  (Fail if > 50.0)
-    * Color spatial var:     260.2  (Fail if > 500.0)
+    * Yellow pixel ratio:    76.46%  (Fail if > 25.83%)
+    * Excess Green Index:    0.560267  (Fail if < 0.632374)
+    * DGCI:                  0.360808  (Fail if < 0.595351)
+    * Interveinal contrast:  37.6  (Fail if > 62.7)
+    * Color spatial var:     260.2  (Fail if > 676.9)
 
 ----------------------------------------------------------------------
   ANALYSIS REASONING
@@ -39,15 +39,17 @@
 
   VERDICT: Leaf Health Status: NOT HEALTHY
   
-  4 feature(s) outside the healthy baseline range:
+  5 feature(s) outside the healthy baseline range:
   
-    1. Yellow pixel ratio (76.5%) is above the healthy baseline (>35.0%). Extensive yellowing (chlorosis) suggests a nutrient deficiency.
+    1. Yellow pixel ratio (76.5%) is above the healthy baseline (>25.8%). Extensive yellowing (chlorosis) suggests a nutrient deficiency.
   
-    2. Dark Green Color Index (0.3608) is below the healthy threshold (0.4500). DGCI correlates with overall leaf health — low values suggest a pale, chlorotic leaf.
+    2. Excess Green Index (0.5603) is below the healthy threshold (0.6324). This indicates reduced overall greenness, consistent with chlorophyll loss from nutrient stress.
   
-    3. Vein density (0.0360) is below the healthy baseline (0.0400). This may indicate impaired vascular development.
+    3. Dark Green Color Index (0.3608) is below the healthy threshold (0.5954). DGCI correlates with overall leaf health — low values suggest a pale, chlorotic leaf.
   
-    4. Average vein thickness (8.26px) is above the healthy baseline (8.00px). Enlarged, corky veins can be a secondary sign of specific nutrient stresses.
+    4. Vein density (0.0360) is below the healthy baseline (0.0502). This may indicate impaired vascular development.
+  
+    5. Average vein thickness (8.26px) is above the healthy baseline (7.65px). Enlarged, corky veins can be a secondary sign of specific nutrient stresses.
   
   Deficiency-type analysis: not yet implemented — coming in a later stage.
 
