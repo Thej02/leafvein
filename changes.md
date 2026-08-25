@@ -13,6 +13,20 @@ This document logs the changes made to enforce a strict pipeline execution order
 3. **Placeholder Message**: When the leaf is deemed NOT HEALTHY, a placeholder message `"Deficiency-type analysis: not yet implemented — coming in a later stage."` is explicitly appended to the reasoning.
 4. **Failed Factors List**: The reasoning clearly lists which individual factors failed without naming the associated deficiency.
 
+## 2026-08-25 — Implemented Unhealthy-Region Circling (Stage 10)
+**Stage:** Stage 10 (Report Generator & Interface)
+**What changed:** 
+1. Updated `src/feature_extraction.py` to retain and return the underlying pixel-level masks for each primary factor (yellow mask, ExG/DGCI maps, interveinal contrast deviations, and local spatial variance maps) alongside their scalar values.
+2. Added `UNHEALTHY_REGION_MIN_AREA = 250` to `config/thresholds.py` to filter single-pixel noise from being circled.
+3. Implemented `generate_unhealthy_regions_image` in `src/report_generator.py` which unions the masks of only the *failed* primary factors, performs morphological cleanup, and circles the regions in magenta (`(255, 0, 255)`) on top of the vein overlay. It also includes a text legend denoting which factors failed.
+4. Hooked up the logic in `src/pipeline.py` to generate and save `output/{image_id}_unhealthy_regions.jpg` only when the verdict is NOT HEALTHY, and referenced it in the text report.
+5. Added unit tests for the circling functionality in `tests/test_report_generator.py`.
+**Why:** User requested explicit visual localization of the unhealthy regions (Stage 10, Task 3) that correspond exactly to the factors that tripped the threshold. Since the feature functions originally only returned scalar averages, they had to be updated first to expose the spatial distribution of the failure.
+**Affected files:** `src/feature_extraction.py`, `src/report_generator.py`, `src/pipeline.py`, `config/thresholds.py`, `tests/test_report_generator.py`
+**Follow-up needed:** No.
+
+---
+
 ## Health-Verification Factors Correction (2026-08-25)
 1. **Added `color_spatial_variance`**: Implemented in `src/feature_extraction.py` as a confound check (distinguishes systemic deficiency from localized patches).
 2. **Primary vs. Secondary Flag Logic**: Updated `src/decision_engine.py` to differentiate between primary factors (color/chlorosis) and secondary factors (vein geometry). A NOT HEALTHY verdict now requires at least one primary factor failure.

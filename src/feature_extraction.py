@@ -25,7 +25,11 @@ import sys
 import os
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from config.thresholds import YELLOW_HSV_LOWER, YELLOW_HSV_UPPER
+from config.thresholds import (
+    YELLOW_HSV_LOWER, YELLOW_HSV_UPPER,
+    EXG_HEALTHY_LOW, DGCI_HEALTHY_LOW,
+    INTERVEINAL_CONTRAST_THRESHOLD, COLOR_SPATIAL_VARIANCE_MAX
+)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -146,7 +150,7 @@ def compute_yellow_pixel_ratio(image: np.ndarray, mask: np.ndarray,
     yellow_in_leaf = cv2.bitwise_and(yellow_mask, mask)
     yellow_count = cv2.countNonZero(yellow_in_leaf)
 
-    return yellow_count / leaf_area
+    return yellow_count / leaf_area, yellow_in_leaf
 
 
 def compute_excess_green_index(image: np.ndarray, mask: np.ndarray) -> float:
@@ -184,8 +188,13 @@ def compute_excess_green_index(image: np.ndarray, mask: np.ndarray) -> float:
     # ExG = 2g − r − b (where g, r, b are normalized)
     exg = 2.0 * g_norm - r_norm - b_norm
 
+    # Create binary mask for pixels falling below threshold
+    exg_mask = np.zeros_like(mask)
+    failing_pixels = (exg < EXG_HEALTHY_LOW) & leaf_pixels
+    exg_mask[failing_pixels] = 255
+
     # Average over leaf pixels only
-    return float(np.mean(exg[leaf_pixels]))
+    return float(np.mean(exg[leaf_pixels])), exg_mask
 
 
 def compute_dgci(image: np.ndarray, mask: np.ndarray) -> float:
@@ -228,7 +237,11 @@ def compute_dgci(image: np.ndarray, mask: np.ndarray) -> float:
 
     dgci = (hue_component + sat_component + val_component) / 3.0
 
-    return float(np.mean(dgci[leaf_pixels]))
+    dgci_mask = np.zeros_like(mask)
+    failing_pixels = (dgci < DGCI_HEALTHY_LOW) & leaf_pixels
+    dgci_mask[failing_pixels] = 255
+
+    return float(np.mean(dgci[leaf_pixels])), dgci_mask
 
 
 def compute_glare_mask(image: np.ndarray, mask: np.ndarray, v_thresh: int = 220, s_thresh: int = 40) -> np.ndarray:
@@ -318,8 +331,14 @@ def compute_interveinal_contrast(image: np.ndarray,
 
     mean_green_on_vein = np.mean(green[on_vein_pixels])
     mean_green_off_vein = np.mean(green[off_vein_pixels])
+    contrast = float(abs(mean_green_on_vein - mean_green_off_vein))
 
-    return float(abs(mean_green_on_vein - mean_green_off_vein))
+    # Mask of pixels near the vein skeleton whose color deviates from baseline
+    contrast_mask = np.zeros_like(mask)
+    failing = (np.abs(green - mean_green_on_vein) > INTERVEINAL_CONTRAST_THRESHOLD) & off_vein_pixels
+    contrast_mask[failing] = 255
+
+    return contrast, contrast_mask
 
 
 def compute_color_spatial_variance(image: np.ndarray, mask: np.ndarray, glare_mask: np.ndarray = None) -> float:
@@ -351,13 +370,31 @@ def compute_color_spatial_variance(image: np.ndarray, mask: np.ndarray, glare_ma
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     
     # Scale Hue to 0-360 and Value to 0-1 for standard variance
-    h = hsv[:, :, 0][leaf_pixels].astype(np.float64) * 2.0
-    v = hsv[:, :, 2][leaf_pixels].astype(np.float64) / 255.0
+    h = hsv[:, :, 0].astype(np.float64) * 2.0
+    v = hsv[:, :, 2].astype(np.float64) / 255.0
 
-    var_h = float(np.var(h))
-    var_v = float(np.var(v))
+    h_leaf = h[leaf_pixels]
+    v_leaf = v[leaf_pixels]
+    var_h = float(np.var(h_leaf))
+    var_v = float(np.var(v_leaf))
+    global_variance = var_h + (var_v * 1000)
 
-    return var_h + (var_v * 1000)  # Scale V variance so it's comparable in magnitude to H
+    # Local variance map via box filter
+    k = 21
+    mean_h = cv2.boxFilter(h, cv2.CV_64F, (k, k))
+    mean_h_sq = cv2.boxFilter(h**2, cv2.CV_64F, (k, k))
+    local_var_h = mean_h_sq - mean_h**2
+
+    mean_v = cv2.boxFilter(v, cv2.CV_64F, (k, k))
+    mean_v_sq = cv2.boxFilter(v**2, cv2.CV_64F, (k, k))
+    local_var_v = mean_v_sq - mean_v**2
+
+    local_variance = local_var_h + (local_var_v * 1000)
+    var_mask = np.zeros_like(mask)
+    failing = (local_variance > COLOR_SPATIAL_VARIANCE_MAX) & leaf_pixels
+    var_mask[failing] = 255
+
+    return global_variance, var_mask
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Combined feature extraction
@@ -392,17 +429,17 @@ def extract_all_features(frontlit_image: np.ndarray,
 
     # Color features (from front-lit image)
     hue_sat = compute_mean_hue_saturation(frontlit_image, mask)
-    yellow_ratio = compute_yellow_pixel_ratio(frontlit_image, mask)
-    exg = compute_excess_green_index(frontlit_image, mask)
-    dgci = compute_dgci(frontlit_image, mask)
+    yellow_ratio, yellow_mask = compute_yellow_pixel_ratio(frontlit_image, mask)
+    exg, exg_mask = compute_excess_green_index(frontlit_image, mask)
+    dgci, dgci_mask = compute_dgci(frontlit_image, mask)
     
     # Calculate glare mask for spatial features
     glare_mask = compute_glare_mask(frontlit_image, mask)
     
-    interveinal = compute_interveinal_contrast(
+    interveinal, interveinal_mask = compute_interveinal_contrast(
         frontlit_image, mask, vein_result['skeleton'], glare_mask=glare_mask
     )
-    spatial_variance = compute_color_spatial_variance(frontlit_image, mask, glare_mask=glare_mask)
+    spatial_variance, variance_mask = compute_color_spatial_variance(frontlit_image, mask, glare_mask=glare_mask)
 
     return {
         # Vein features
@@ -420,4 +457,13 @@ def extract_all_features(frontlit_image: np.ndarray,
         'dgci': dgci,
         'interveinal_contrast': interveinal,
         'color_spatial_variance': spatial_variance,
+
+        # Underlying pixel masks for primary factors (used in Stage 10 circling)
+        'masks': {
+            'yellow_pixel_ratio': yellow_mask,
+            'excess_green_index': exg_mask,
+            'dgci': dgci_mask,
+            'interveinal_contrast': interveinal_mask,
+            'color_spatial_variance': variance_mask,
+        }
     }

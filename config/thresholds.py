@@ -113,3 +113,11 @@ VEIN_DENSITY_DEFICIENT = 0.050208
 # Vein thickness (average pixel width)
 # Calibration method: Healthy mean (7.49) + slightly below 1 std (0.68)
 VEIN_THICKNESS_DEFICIENT_HIGH = 7.653426
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Reporting thresholds (Stage 10)
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Minimum area (in pixels) for a blob of flagged pixels to be circled
+# Drops single-pixel noise from the "unhealthy regions" visualization
+UNHEALTHY_REGION_MIN_AREA = 250

@@ -35,6 +35,7 @@ from src.report_generator import (
     generate_annotated_image,
     save_report,
     save_annotated_image,
+    generate_unhealthy_regions_image,
 )
 from src.interactive_roi import select_circle_roi
 
@@ -208,6 +209,17 @@ def run_pipeline(backlit_path: str,
             mask_path = os.path.join(output_dir, f"{image_id}_mask.jpg")
             cv2.imwrite(mask_path, mask)
             output_files.append(mask_path)
+            
+            # Save unhealthy regions image if NOT HEALTHY
+            if verdict_result['verdict'] != "Leaf Health Status: HEALTHY":
+                unhealthy_regions_img = generate_unhealthy_regions_image(
+                    vein_result['debug_overlay'], features, verdict_result
+                )
+                if unhealthy_regions_img is not None:
+                    unhealthy_path = os.path.join(output_dir, f"{image_id}_unhealthy_regions.jpg")
+                    cv2.imwrite(unhealthy_path, unhealthy_regions_img)
+                    output_files.append(unhealthy_path)
+                    print(f"       Unhealthy regions saved: {unhealthy_path}")
 
     print(f"\nDone. Verdict: {verdict_result['verdict']}")
 

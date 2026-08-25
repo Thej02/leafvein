@@ -26,6 +26,7 @@ from config.thresholds import (
     COLOR_SPATIAL_VARIANCE_MAX,
     VEIN_DENSITY_DEFICIENT,
     VEIN_THICKNESS_DEFICIENT_HIGH,
+    UNHEALTHY_REGION_MIN_AREA,
 )
 
 
@@ -103,6 +104,10 @@ def generate_text_report(image_id: str,
     for line in verdict_result['reasoning'].split('\n'):
         lines.append(f"  {line}")
     lines.append("")
+
+    if verdict_result['verdict'] != "Leaf Health Status: HEALTHY":
+        lines.append(f"  Flagged regions visualized in {image_id}_unhealthy_regions.jpg")
+        lines.append("")
 
     # Footer
     lines.append("=" * 70)
@@ -252,3 +257,67 @@ def save_annotated_image(image: np.ndarray, output_path: str) -> str:
     os.makedirs(os.path.dirname(output_path) or '.', exist_ok=True)
     cv2.imwrite(output_path, image)
     return output_path
+
+
+def generate_unhealthy_regions_image(overlay_image: np.ndarray,
+                                     features: dict,
+                                     verdict_result: dict) -> np.ndarray:
+    """
+    Circle flagged regions for failed primary factors.
+
+    Args:
+        overlay_image: The BGR image with the red vein overlay.
+        features: Feature dict from feature_extraction (containing 'masks').
+        verdict_result: Output dict from decision_engine.evaluate().
+
+    Returns:
+        BGR image with magenta/orange circles around flagged regions, or None if HEALTHY.
+    """
+    if verdict_result['verdict'] == "Leaf Health Status: HEALTHY":
+        return None
+
+    flagged_masks = []
+    failed_factors = []
+    
+    # Identify which primary factors failed
+    for flag in verdict_result.get('flags', []):
+        if flag['type'] == 'primary':
+            factor = flag['feature']
+            if 'masks' in features and factor in features['masks']:
+                flagged_masks.append(features['masks'][factor])
+                failed_factors.append(factor)
+
+    if not flagged_masks:
+        return overlay_image.copy()
+
+    # Union all failed primary masks
+    union_mask = np.zeros_like(flagged_masks[0])
+    for m in flagged_masks:
+        union_mask = cv2.bitwise_or(union_mask, m)
+
+    # Morphological cleanup
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+    cleaned_mask = cv2.morphologyEx(union_mask, cv2.MORPH_OPEN, kernel)
+    cleaned_mask = cv2.morphologyEx(cleaned_mask, cv2.MORPH_CLOSE, kernel)
+
+    # Find contours
+    contours, _ = cv2.findContours(cleaned_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    result_image = overlay_image.copy()
+    circle_color = (255, 0, 255)  # Magenta
+
+    for cnt in contours:
+        area = cv2.contourArea(cnt)
+        if area >= UNHEALTHY_REGION_MIN_AREA:
+            # Fit minimum enclosing circle
+            (x, y), radius = cv2.minEnclosingCircle(cnt)
+            center = (int(x), int(y))
+            # Draw circle with 5px padding
+            cv2.circle(result_image, center, int(radius) + 5, circle_color, 2)
+
+    # Add legend at the top
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    legend_text = f"Flagged by: {', '.join(failed_factors)}"
+    cv2.putText(result_image, legend_text, (20, 30), font, 0.7, circle_color, 2)
+
+    return result_image
