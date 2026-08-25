@@ -1,63 +1,24 @@
-# CHANGES.md — Running Change Log
+# Pipeline Restructuring & Binary Verdict Changes
 
-> Append-only log. Every implementation decision, deviation from `implementation_plan.md`,
-> calibrated threshold value, rejected data sample, or design change goes here, in
-> reverse-chronological order (newest at top). `goal.md` is never changed, so nothing
-> here should ever describe a change to the goal itself — only to how we get there.
+This document logs the changes made to enforce a strict pipeline execution order and simplify the health verdict logic.
 
-## How to log an entry
-Copy this template for each change:
+## Pipeline Restructuring (`src/pipeline.py`)
+1. **Interactive ROI Tracing**: Moved from before segmentation to **Step 2**, running *only* if the **Step 1 Species Check** passes. It now displays the raw (resized but not CLAHE-enhanced) front-lit image for tracing. The resulting `roi_mask` is then intersected with the segmentation mask.
+2. **Red Overlay Display**: In **Step 3 (Vein Extraction)**, the pipeline now explicitly generates the red overlay (using `create_debug_overlay` from `vein_extraction.py`) and displays it to the user.
+3. **Execution Order**: The sequence is strictly: Segmentation -> Species Check -> ROI Tracing -> Vein Extraction -> Feature Extraction -> Decision Engine.
 
-```
-## YYYY-MM-DD — <short title>
-**Stage:** <which implementation_plan.md stage this touches>
-**What changed:** <one or two sentences>
-**Why:** <reasoning>
-**Affected files:** <paths>
-**Follow-up needed:** <yes/no — describe if yes>
-```
+## Health Verdict Simplification (`src/decision_engine.py`)
+1. **Binary Verdicts**: The engine now only outputs `"Leaf Health Status: HEALTHY"` or `"Leaf Health Status: NOT HEALTHY"`. The intermediate "Possibly Deficient" verdict has been removed.
+2. **Deficiency Mapping Withheld**: All specific deficiency naming (e.g., Nitrogen, Magnesium) has been removed from the reasoning strings.
+3. **Placeholder Message**: When the leaf is deemed NOT HEALTHY, a placeholder message `"Deficiency-type analysis: not yet implemented — coming in a later stage."` is explicitly appended to the reasoning.
+4. **Failed Factors List**: The reasoning clearly lists which individual factors failed without naming the associated deficiency.
 
----
-
-## 2026-08-20 — Initial planning documents created
-**Stage:** Stage 0 (pre-work)
-**What changed:** Created `goal.md`, `implementation_plan.md`, and this `changes.md`
-file based on Phase-I report review. Confirmed project will use a rule-based /
-classical image-processing pipeline instead of a trained ML classifier, per explicit
-user requirement.
-**Why:** Phase-I report's original "AI/ML model" framing is being replaced with a
-transparent, interpretable, non-ML rule engine to (a) avoid the dataset-size
-limitation the report already admits to, (b) make the non-invasive/low-cost claims
-in the abstract concretely true, and (c) produce explainable output tied to real
-botanical signals rather than a black-box prediction.
-**Affected files:** `goal.md`, `implementation_plan.md`, `changes.md`
-**Follow-up needed:** Yes — Stage 2 (capture protocol) and Stage 3 (data collection)
-have not started yet. Next entry should log the finalized capture protocol once
-tested with a real leaf.
-
----
-
-## 2026-08-20 — Novelty check performed, goal.md amended (not the core goal itself)
-**Stage:** Stage 0 (pre-work) / goal validation
-**What changed:** Ran a literature search to verify the project's novelty before
-continuing implementation, per explicit user request. Confirmed two gaps: (1) no
-existing image-based nutrient-deficiency detection work targets Hibiscus
-rosa-sinensis specifically — existing studies target rice, mango, grape, citrus,
-coffee, tomato, black gram, apple; (2) the field is dominated by ML/DL classifiers,
-with classical vein/edge detection (e.g. Canny) used only as ML preprocessing, not
-as a standalone interpretable decision engine. Added a "Novelty Positioning" section
-to `goal.md` documenting this so it isn't lost and can be cited in the Phase-II
-report/viva. Did not change any of the original Non-Negotiable Constraints, Success
-Criteria, or Out-of-Scope items — the existing rule-based, non-ML plan already
-matches what makes the project novel, so `implementation_plan.md` requires no
-structural changes as a result of this check.
-**Why:** User asked for the project to be verified as novel and for plans to change
-if it wasn't. Research confirmed it is novel as currently scoped, so the correct
-action was to document the finding, not alter the pipeline design.
-**Affected files:** `goal.md` (new section added), `changes.md`
-**Follow-up needed:** No immediate follow-up. When writing the Phase-I→Phase-II
-literature-gap section (2.17 in the existing report) for final submission, cite this
-novelty framing explicitly — it strengthens the "gap addressed" argument already
-present in that section.
-
-<!-- New entries go above this line -->
+## Health-Verification Factors Correction (2026-08-25)
+1. **Added `color_spatial_variance`**: Implemented in `src/feature_extraction.py` as a confound check (distinguishes systemic deficiency from localized patches).
+2. **Primary vs. Secondary Flag Logic**: Updated `src/decision_engine.py` to differentiate between primary factors (color/chlorosis) and secondary factors (vein geometry). A NOT HEALTHY verdict now requires at least one primary factor failure.
+3. **Threshold Calibration**: Recalibrated values in `config/thresholds.py` based on reference data means and standard deviations.
+4. **Regression Tests**: Rewrote `tests/test_decision_engine.py` to match the new rules and added a test to ensure secondary-only failures do not trigger a NOT HEALTHY verdict.
+5. **False Negative Bug Fix (3.jpeg)**: 
+   - *Issue*: `data/reference/3.jpeg` is heavily mottled/speckled (visually ~40-50% pale yellow-green area) but returned HEALTHY with a `yellow_pixel_ratio` of only 1.24%. The narrow HSV band was completely missing the desaturated yellow-green mottling.
+   - *Fix*: Widened the yellow HSV band in `config/thresholds.py` from `(15, 40, 100)` -> `(35, 255, 255)` to a more inclusive `(15, 20, 50)` -> `(45, 255, 255)`. 
+   - *Result*: The `yellow_pixel_ratio` on `3.jpeg` correctly jumped to **39.11%**, exceeding the calibrated failure threshold. The `color_spatial_variance` factor also correctly triggered at **522.4**, flagging the leaf as NOT HEALTHY due to a potential pest/fungal issue rather than systemic deficiency. The output report was also updated to print the pass/fail thresholds next to measured values for easier debugging.

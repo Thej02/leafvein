@@ -70,42 +70,44 @@ MIN_SKELETON_BRANCH_LENGTH = 15
 # ─────────────────────────────────────────────────────────────────────────────
 
 # HSV range defining "yellow / pale" pixels for yellow_pixel_ratio
-YELLOW_HSV_LOWER = (15, 40, 100)
-YELLOW_HSV_UPPER = (35, 255, 255)
+# Widened to capture pale, desaturated yellow-green mottling (H up to 45, S down to 20, V down to 50)
+YELLOW_HSV_LOWER = (15, 20, 50)
+YELLOW_HSV_UPPER = (45, 255, 255)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Decision engine thresholds (Stage 8 — populated after Stage 7 calibration)
 # ─────────────────────────────────────────────────────────────────────────────
-# NOTE: The values below are PLACEHOLDERS. They will be replaced with
-# empirically calibrated values from the reference dataset during Stage 7.
-# Each value includes the calibration method in its comment once set.
-
-# Vein density (vein skeleton pixels / leaf area pixels)
-# Calibration method: TBD in Stage 7 (e.g., healthy mean − 1.5×std)
-VEIN_DENSITY_HEALTHY_LOW = 0.03     # placeholder — below this = possibly deficient
-VEIN_DENSITY_DEFICIENT = 0.02       # placeholder — below this = deficient
+# PRIMARY FACTORS (Color / Chlorosis)
+# These factors independently trigger a NOT HEALTHY verdict.
 
 # Yellow pixel ratio (fraction of leaf pixels in yellow HSV band)
-# Calibration method: TBD in Stage 7
-YELLOW_RATIO_POSSIBLY_DEFICIENT = 0.15   # placeholder — above this = possibly deficient
-YELLOW_RATIO_DEFICIENT = 0.30            # placeholder — above this = deficient
+# Calibration method: Adjusted to catch pale/mottled yellowing (>35%)
+YELLOW_RATIO_DEFICIENT = nan
 
 # Excess Green Index (ExG = 2G − R − B, normalized per pixel, then averaged)
-# Calibration method: TBD in Stage 7
-EXG_HEALTHY_LOW = 0.10              # placeholder — below this = reduced greenness
+# Calibration method: Healthy mean (0.619) - 1 std (0.114)
+EXG_HEALTHY_LOW = nan
 
 # Dark Green Color Index (DGCI, standard turf formula)
-# Calibration method: TBD in Stage 7
-DGCI_HEALTHY_LOW = 0.40             # placeholder — below this = pale/chlorotic
-
-# Mean saturation of leaf region in HSV
-# Calibration method: TBD in Stage 7
-MEAN_SATURATION_HEALTHY_LOW = 60    # placeholder — below this = washed out color
-
-# Vein thickness average (pixels, from distance transform along skeleton)
-# Calibration method: TBD in Stage 7
-VEIN_THICKNESS_HEALTHY_LOW = 1.5    # placeholder
+# Calibration method: Marginally below healthy mean (0.531)
+DGCI_HEALTHY_LOW = nan
 
 # Interveinal contrast (difference in mean green between on-vein and off-vein regions)
-# Calibration method: TBD in Stage 7
-INTERVEINAL_CONTRAST_THRESHOLD = 15.0  # placeholder — above this suggests interveinal chlorosis
+# Calibration method: Expected to be high in Mg/Fe deficiency. Set above typical healthy baseline.
+INTERVEINAL_CONTRAST_THRESHOLD = nan
+
+# Color spatial variance (confound check for localized damage vs systemic deficiency)
+# Calibration method: Adjusted to catch high variance mottling (e.g., >500)
+COLOR_SPATIAL_VARIANCE_MAX = nan
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SECONDARY FACTORS (Vein Geometry)
+# These factors only support an already-failing primary factor.
+
+# Vein density (vein skeleton pixels / leaf area pixels)
+# Calibration method: Below healthy mean (0.048)
+VEIN_DENSITY_DEFICIENT = nan
+
+# Vein thickness average (pixels, from distance transform along skeleton)
+# Calibration method: Above healthy mean (7.49) — Citrus evidence shows Mg deficiency enlarges veins
+VEIN_THICKNESS_DEFICIENT_HIGH = nan

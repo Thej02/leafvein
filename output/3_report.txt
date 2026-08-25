@@ -2,8 +2,8 @@
   ROSA-SINENSIS LEAF HEALTH ASSESSMENT REPORT
 ======================================================================
 
-  Image ID:      1
-  Date:          2026-08-25 08:24:37
+  Image ID:      3
+  Date:          2026-08-25 08:23:43
   Verdict:       Leaf Health Status: NOT HEALTHY
   Signals:       2 feature(s) flagged
 
@@ -11,27 +11,27 @@
   SEGMENTATION QUALITY
 ----------------------------------------------------------------------
   Status:        PASS
-  Leaf area:     320,473 pixels (68.5% of frame)
+  Leaf area:     522,046 pixels (66.4% of frame)
 
 ----------------------------------------------------------------------
   MEASURED FEATURES
 ----------------------------------------------------------------------
 
   Vein Architecture (Secondary Factors):
-    * Vein density:          0.058114  (Fail if < 0.040000)
-    * Vein thickness (avg):  6.96 px (Fail if > 8.00)
-    * Branch points:         3109
-    * Vein pixels:           18,624
-    * Leaf area:             320,473 px
+    * Vein density:          0.052264  (Fail if < 0.040000)
+    * Vein thickness (avg):  7.27 px (Fail if > 8.00)
+    * Branch points:         3541
+    * Vein pixels:           27,284
+    * Leaf area:             522,046 px
 
   Color / Chlorosis (Primary Factors):
-    * Mean hue:              73.4
-    * Mean saturation:       200.4
-    * Yellow pixel ratio:    2.08%  (Fail if > 35.00%)
-    * Excess Green Index:    0.751360  (Fail if < 0.500000)
-    * DGCI:                  0.713370  (Fail if < 0.450000)
-    * Interveinal contrast:  52.4  (Fail if > 50.0)
-    * Color spatial var:     566.5  (Fail if > 500.0)
+    * Mean hue:              50.1
+    * Mean saturation:       150.6
+    * Yellow pixel ratio:    39.11%  (Fail if > 35.00%)
+    * Excess Green Index:    0.546499  (Fail if < 0.500000)
+    * DGCI:                  0.518864  (Fail if < 0.450000)
+    * Interveinal contrast:  29.7  (Fail if > 50.0)
+    * Color spatial var:     522.4  (Fail if > 500.0)
 
 ----------------------------------------------------------------------
   ANALYSIS REASONING
@@ -41,9 +41,9 @@
   
   2 feature(s) outside the healthy baseline range:
   
-    1. Interveinal contrast (52.4) exceeds the threshold (50.0). This 'green veins with yellowing between veins' pattern is a signature of nutrient stress.
+    1. Yellow pixel ratio (39.1%) is above the healthy baseline (>35.0%). Extensive yellowing (chlorosis) suggests a nutrient deficiency.
   
-    2. Color spatial variance (566.5) is very high (>500.0). This suggests sharp, localized patches (e.g., pest damage, fungal spotting, or physical injury) rather than diffuse systemic nutrient deficiency. Closer inspection recommended.
+    2. Color spatial variance (522.4) is very high (>500.0). This suggests sharp, localized patches (e.g., pest damage, fungal spotting, or physical injury) rather than diffuse systemic nutrient deficiency. Closer inspection recommended.
   
   Deficiency-type analysis: not yet implemented — coming in a later stage.
 

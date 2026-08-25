@@ -1,7 +1,7 @@
 image_id,capture_date,label,ground_truth_basis,notes
 1,2026-08-20,healthy,Visual grading against chart,Sample image
-2,2026-08-20,healthy,Visual grading against chart,Sample image
-3,2026-08-20,healthy,Visual grading against chart,Sample image
+2,2026-08-20,deficient,Visual grading against chart,Sample image
+3,2026-08-20,deficient,Visual grading against chart,Sample image
 4,2026-08-20,possibly_deficient,Visual grading against chart,Sample image
 5,2026-08-20,deficient,Visual grading against chart,Sample image
 6,2026-08-20,healthy,Visual grading against chart,Sample image

@@ -231,9 +231,41 @@ def compute_dgci(image: np.ndarray, mask: np.ndarray) -> float:
     return float(np.mean(dgci[leaf_pixels]))
 
 
+def compute_glare_mask(image: np.ndarray, mask: np.ndarray, v_thresh: int = 220, s_thresh: int = 40) -> np.ndarray:
+    """
+    Detect specular highlights (glare) on the leaf surface.
+
+    Glare is typically characterized by very high brightness (Value) and very
+    low color intensity (Saturation), as it reflects the white light source.
+    These regions should be excluded from color variance and contrast calculations.
+
+    Args:
+        image: Front-lit BGR image.
+        mask: Binary leaf mask (uint8, 0 or 255).
+        v_thresh: Minimum Value (brightness) in HSV (0-255) to be considered glare.
+        s_thresh: Maximum Saturation in HSV (0-255) to be considered glare.
+
+    Returns:
+        Binary mask (uint8, 0 or 255) of glare pixels inside the leaf.
+    """
+    if cv2.countNonZero(mask) == 0:
+        return np.zeros_like(mask)
+
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    v_channel = hsv[:, :, 2]
+    s_channel = hsv[:, :, 1]
+
+    glare = (v_channel > v_thresh) & (s_channel < s_thresh)
+    glare_mask = np.zeros_like(mask)
+    glare_mask[glare] = 255
+
+    return cv2.bitwise_and(glare_mask, mask)
+
+
 def compute_interveinal_contrast(image: np.ndarray,
                                    mask: np.ndarray,
                                    skeleton: np.ndarray,
+                                   glare_mask: np.ndarray = None,
                                    dilation_radius: int = 10) -> float:
     """
     Compute the color contrast between on-vein and off-vein (interveinal) regions.
@@ -246,6 +278,7 @@ def compute_interveinal_contrast(image: np.ndarray,
         image: Front-lit BGR image.
         mask: Binary leaf mask (uint8, 0 or 255).
         skeleton: Binary vein skeleton from the backlit image analysis (uint8, 0 or 255).
+        glare_mask: Optional binary mask of specular highlights to exclude.
         dilation_radius: How many pixels around each skeleton pixel to consider
                         as "on-vein" region.
 
@@ -262,11 +295,17 @@ def compute_interveinal_contrast(image: np.ndarray,
                                        (dilation_radius * 2 + 1, dilation_radius * 2 + 1))
     vein_region = cv2.dilate(skeleton, kernel, iterations=1)
 
-    # On-vein = vein region ∩ leaf mask
-    on_vein_mask = cv2.bitwise_and(vein_region, mask)
+    # Exclude glare from the base mask
+    if glare_mask is not None:
+        effective_mask = cv2.bitwise_and(mask, cv2.bitwise_not(glare_mask))
+    else:
+        effective_mask = mask
 
-    # Off-vein = leaf mask − on-vein
-    off_vein_mask = cv2.bitwise_and(mask, cv2.bitwise_not(vein_region))
+    # On-vein = vein region ∩ effective leaf mask
+    on_vein_mask = cv2.bitwise_and(vein_region, effective_mask)
+
+    # Off-vein = effective leaf mask − on-vein
+    off_vein_mask = cv2.bitwise_and(effective_mask, cv2.bitwise_not(vein_region))
 
     on_vein_pixels = on_vein_mask > 0
     off_vein_pixels = off_vein_mask > 0
@@ -282,6 +321,43 @@ def compute_interveinal_contrast(image: np.ndarray,
 
     return float(abs(mean_green_on_vein - mean_green_off_vein))
 
+
+def compute_color_spatial_variance(image: np.ndarray, mask: np.ndarray, glare_mask: np.ndarray = None) -> float:
+    """
+    Compute spatial variance of color (hue and value) across the leaf.
+
+    Nutrient chlorosis is usually diffuse and graded. High spatial variance
+    suggests sharp, localized patches (e.g., pest damage, fungal spotting,
+    or physical injury) rather than a systemic nutrient deficiency. This serves
+    as a confound check.
+
+    Args:
+        image: Front-lit BGR image.
+        mask: Binary leaf mask (uint8, 0 or 255).
+        glare_mask: Optional binary mask of specular highlights to exclude.
+
+    Returns:
+        Sum of hue variance and value (lightness) variance.
+    """
+    if glare_mask is not None:
+        effective_mask = cv2.bitwise_and(mask, cv2.bitwise_not(glare_mask))
+    else:
+        effective_mask = mask
+
+    leaf_pixels = effective_mask > 0
+    if not np.any(leaf_pixels):
+        return 0.0
+
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    
+    # Scale Hue to 0-360 and Value to 0-1 for standard variance
+    h = hsv[:, :, 0][leaf_pixels].astype(np.float64) * 2.0
+    v = hsv[:, :, 2][leaf_pixels].astype(np.float64) / 255.0
+
+    var_h = float(np.var(h))
+    var_v = float(np.var(v))
+
+    return var_h + (var_v * 1000)  # Scale V variance so it's comparable in magnitude to H
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Combined feature extraction
@@ -319,9 +395,14 @@ def extract_all_features(frontlit_image: np.ndarray,
     yellow_ratio = compute_yellow_pixel_ratio(frontlit_image, mask)
     exg = compute_excess_green_index(frontlit_image, mask)
     dgci = compute_dgci(frontlit_image, mask)
+    
+    # Calculate glare mask for spatial features
+    glare_mask = compute_glare_mask(frontlit_image, mask)
+    
     interveinal = compute_interveinal_contrast(
-        frontlit_image, mask, vein_result['skeleton']
+        frontlit_image, mask, vein_result['skeleton'], glare_mask=glare_mask
     )
+    spatial_variance = compute_color_spatial_variance(frontlit_image, mask, glare_mask=glare_mask)
 
     return {
         # Vein features
@@ -331,11 +412,12 @@ def extract_all_features(frontlit_image: np.ndarray,
         'vein_pixel_count': vein_result['vein_pixel_count'],
         'leaf_area_pixels': leaf_area_pixels,
 
-        # Color features
+        # Color features (Primary signals)
         'mean_hue': hue_sat['mean_hue'],
         'mean_saturation': hue_sat['mean_saturation'],
         'yellow_pixel_ratio': yellow_ratio,
         'excess_green_index': exg,
         'dgci': dgci,
         'interveinal_contrast': interveinal,
+        'color_spatial_variance': spatial_variance,
     }

@@ -21,22 +21,19 @@ import os
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from config.thresholds import (
-    VEIN_DENSITY_HEALTHY_LOW,
-    VEIN_DENSITY_DEFICIENT,
-    YELLOW_RATIO_POSSIBLY_DEFICIENT,
     YELLOW_RATIO_DEFICIENT,
     EXG_HEALTHY_LOW,
     DGCI_HEALTHY_LOW,
-    MEAN_SATURATION_HEALTHY_LOW,
-    VEIN_THICKNESS_HEALTHY_LOW,
     INTERVEINAL_CONTRAST_THRESHOLD,
+    COLOR_SPATIAL_VARIANCE_MAX,
+    VEIN_DENSITY_DEFICIENT,
+    VEIN_THICKNESS_DEFICIENT_HIGH,
 )
 
 
 # Verdict constants
-VERDICT_HEALTHY = "Healthy"
-VERDICT_POSSIBLY_DEFICIENT = "Possibly Deficient"
-VERDICT_DEFICIENT = "Deficient"
+VERDICT_HEALTHY = "Leaf Health Status: HEALTHY"
+VERDICT_NOT_HEALTHY = "Leaf Health Status: NOT HEALTHY"
 
 
 def evaluate(features: dict) -> dict:
@@ -57,174 +54,130 @@ def evaluate(features: dict) -> dict:
 
     Returns:
         Dict with keys:
-          'verdict': str — one of VERDICT_HEALTHY, VERDICT_POSSIBLY_DEFICIENT, VERDICT_DEFICIENT
+          'verdict': str — one of VERDICT_HEALTHY, VERDICT_NOT_HEALTHY
           'confidence_signals': int — how many individual features flagged deficiency
           'reasoning': str — human-readable explanation of the verdict
           'flags': list of dict — each flagged feature with its value, threshold, and meaning
     """
-    flags = []
+    # ─────────────────────────────────────────────────────────────────────────
+    # Primary Factors (Color / Chlorosis)
+    # ─────────────────────────────────────────────────────────────────────────
+    primary_flags = []
 
-    # ── Vein density check ──────────────────────────────────────────────
-    vein_density = features.get('vein_density', 0)
-
-    if vein_density < VEIN_DENSITY_DEFICIENT:
-        flags.append({
-            'feature': 'vein_density',
-            'value': vein_density,
-            'threshold': VEIN_DENSITY_DEFICIENT,
-            'direction': 'below',
-            'severity': 'high',
-            'meaning': (
-                f"Vein density ({vein_density:.4f}) is well below the healthy baseline "
-                f"({VEIN_DENSITY_DEFICIENT:.4f}). This suggests reduced vascular "
-                f"architecture, which may indicate nutrient deficiency affecting "
-                f"leaf vein development."
-            ),
-        })
-    elif vein_density < VEIN_DENSITY_HEALTHY_LOW:
-        flags.append({
-            'feature': 'vein_density',
-            'value': vein_density,
-            'threshold': VEIN_DENSITY_HEALTHY_LOW,
-            'direction': 'below',
-            'severity': 'moderate',
-            'meaning': (
-                f"Vein density ({vein_density:.4f}) is below the healthy range "
-                f"({VEIN_DENSITY_HEALTHY_LOW:.4f}). This is a mild reduction that "
-                f"warrants monitoring."
-            ),
-        })
-
-    # ── Yellow pixel ratio check ────────────────────────────────────────
-    yellow_ratio = features.get('yellow_pixel_ratio', 0)
-
+    yellow_ratio = features.get('yellow_pixel_ratio', 0.0)
     if yellow_ratio > YELLOW_RATIO_DEFICIENT:
-        flags.append({
+        primary_flags.append({
             'feature': 'yellow_pixel_ratio',
             'value': yellow_ratio,
             'threshold': YELLOW_RATIO_DEFICIENT,
-            'direction': 'above',
-            'severity': 'high',
-            'meaning': (
-                f"Yellow pixel ratio ({yellow_ratio:.1%}) is significantly above "
-                f"the healthy range (>{YELLOW_RATIO_DEFICIENT:.1%}). Extensive "
-                f"yellowing (chlorosis) suggests a nutrient deficiency — pattern "
-                f"consistent with nitrogen or magnesium deficiency."
-            ),
-        })
-    elif yellow_ratio > YELLOW_RATIO_POSSIBLY_DEFICIENT:
-        flags.append({
-            'feature': 'yellow_pixel_ratio',
-            'value': yellow_ratio,
-            'threshold': YELLOW_RATIO_POSSIBLY_DEFICIENT,
-            'direction': 'above',
-            'severity': 'moderate',
+            'type': 'primary',
             'meaning': (
                 f"Yellow pixel ratio ({yellow_ratio:.1%}) is above the healthy "
-                f"baseline (>{YELLOW_RATIO_POSSIBLY_DEFICIENT:.1%}). Some chlorosis "
-                f"is present — early sign of possible nutrient deficiency."
+                f"baseline (>{YELLOW_RATIO_DEFICIENT:.1%}). Extensive yellowing "
+                f"(chlorosis) suggests a nutrient deficiency."
             ),
         })
 
-    # ── Excess Green Index check ────────────────────────────────────────
-    exg = features.get('excess_green_index', 0)
-
+    exg = features.get('excess_green_index', 1.0)
     if exg < EXG_HEALTHY_LOW:
-        flags.append({
+        primary_flags.append({
             'feature': 'excess_green_index',
             'value': exg,
             'threshold': EXG_HEALTHY_LOW,
-            'direction': 'below',
-            'severity': 'moderate',
+            'type': 'primary',
             'meaning': (
-                f"Excess Green Index ({exg:.4f}) is below the healthy threshold "
-                f"({EXG_HEALTHY_LOW:.4f}). This indicates reduced overall greenness, "
-                f"consistent with chlorophyll loss from nutrient stress."
+                f"Excess Green Index ({exg:.4f}) is below the healthy "
+                f"threshold ({EXG_HEALTHY_LOW:.4f}). This indicates reduced "
+                f"overall greenness, consistent with chlorophyll loss from nutrient stress."
             ),
         })
 
-    # ── DGCI check ─────────────────────────────────────────────────────
-    dgci = features.get('dgci', 0)
-
+    dgci = features.get('dgci', 1.0)
     if dgci < DGCI_HEALTHY_LOW:
-        flags.append({
+        primary_flags.append({
             'feature': 'dgci',
             'value': dgci,
             'threshold': DGCI_HEALTHY_LOW,
-            'direction': 'below',
-            'severity': 'moderate',
+            'type': 'primary',
             'meaning': (
                 f"Dark Green Color Index ({dgci:.4f}) is below the healthy "
-                f"threshold ({DGCI_HEALTHY_LOW:.4f}). DGCI correlates with leaf "
-                f"nitrogen content — low values suggest a pale, chlorotic leaf."
+                f"threshold ({DGCI_HEALTHY_LOW:.4f}). DGCI correlates with overall "
+                f"leaf health — low values suggest a pale, chlorotic leaf."
             ),
         })
 
-    # ── Mean saturation check ──────────────────────────────────────────
-    mean_sat = features.get('mean_saturation', 0)
-
-    if mean_sat < MEAN_SATURATION_HEALTHY_LOW:
-        flags.append({
-            'feature': 'mean_saturation',
-            'value': mean_sat,
-            'threshold': MEAN_SATURATION_HEALTHY_LOW,
-            'direction': 'below',
-            'severity': 'moderate',
-            'meaning': (
-                f"Mean saturation ({mean_sat:.1f}) is below the healthy range "
-                f"({MEAN_SATURATION_HEALTHY_LOW:.1f}). Low color saturation "
-                f"indicates washed-out coloring, consistent with chlorosis."
-            ),
-        })
-
-    # ── Vein thickness check ───────────────────────────────────────────
-    vein_thickness = features.get('vein_thickness_avg', 0)
-
-    if vein_thickness < VEIN_THICKNESS_HEALTHY_LOW and vein_thickness > 0:
-        flags.append({
-            'feature': 'vein_thickness_avg',
-            'value': vein_thickness,
-            'threshold': VEIN_THICKNESS_HEALTHY_LOW,
-            'direction': 'below',
-            'severity': 'low',
-            'meaning': (
-                f"Average vein thickness ({vein_thickness:.2f}px) is below the "
-                f"healthy baseline ({VEIN_THICKNESS_HEALTHY_LOW:.2f}px). Thinner "
-                f"veins may indicate reduced vascular development."
-            ),
-        })
-
-    # ── Interveinal contrast check ─────────────────────────────────────
-    interveinal = features.get('interveinal_contrast', 0)
-
+    interveinal = features.get('interveinal_contrast', 0.0)
     if interveinal > INTERVEINAL_CONTRAST_THRESHOLD:
-        flags.append({
+        primary_flags.append({
             'feature': 'interveinal_contrast',
             'value': interveinal,
             'threshold': INTERVEINAL_CONTRAST_THRESHOLD,
-            'direction': 'above',
-            'severity': 'moderate',
+            'type': 'primary',
             'meaning': (
                 f"Interveinal contrast ({interveinal:.1f}) exceeds the threshold "
                 f"({INTERVEINAL_CONTRAST_THRESHOLD:.1f}). This 'green veins with "
-                f"yellowing between veins' pattern is a classic signature of "
-                f"magnesium or iron deficiency."
+                f"yellowing between veins' pattern is a signature of nutrient stress."
+            ),
+        })
+    variance = features.get('color_spatial_variance', 0.0)
+    if variance > COLOR_SPATIAL_VARIANCE_MAX:
+        primary_flags.append({
+            'feature': 'color_spatial_variance',
+            'value': variance,
+            'threshold': COLOR_SPATIAL_VARIANCE_MAX,
+            'type': 'primary',
+            'meaning': (
+                f"Color spatial variance ({variance:.1f}) is very high "
+                f"(>{COLOR_SPATIAL_VARIANCE_MAX:.1f}). This suggests sharp, localized "
+                f"patches (e.g., pest damage, fungal spotting, or physical injury) "
+                f"rather than diffuse systemic nutrient deficiency. Closer inspection recommended."
             ),
         })
 
-    # ── Determine verdict ──────────────────────────────────────────────
-    high_severity_count = sum(1 for f in flags if f['severity'] == 'high')
-    moderate_severity_count = sum(1 for f in flags if f['severity'] == 'moderate')
-    total_flags = len(flags)
+    # ─────────────────────────────────────────────────────────────────────────
+    # Secondary Factors (Vein Geometry)
+    # ─────────────────────────────────────────────────────────────────────────
+    secondary_flags = []
 
-    if high_severity_count >= 2 or (high_severity_count >= 1 and moderate_severity_count >= 2):
-        verdict = VERDICT_DEFICIENT
-    elif high_severity_count >= 1 or moderate_severity_count >= 2 or total_flags >= 3:
-        verdict = VERDICT_POSSIBLY_DEFICIENT
-    elif total_flags >= 1:
-        verdict = VERDICT_POSSIBLY_DEFICIENT
+    vein_density = features.get('vein_density', 1.0)
+    if vein_density < VEIN_DENSITY_DEFICIENT:
+        secondary_flags.append({
+            'feature': 'vein_density',
+            'value': vein_density,
+            'threshold': VEIN_DENSITY_DEFICIENT,
+            'type': 'secondary',
+            'meaning': (
+                f"Vein density ({vein_density:.4f}) is below the healthy baseline "
+                f"({VEIN_DENSITY_DEFICIENT:.4f}). This may indicate impaired vascular "
+                f"development."
+            ),
+        })
+
+    vein_thickness = features.get('vein_thickness_avg', 0.0)
+    if vein_thickness > VEIN_THICKNESS_DEFICIENT_HIGH:
+        secondary_flags.append({
+            'feature': 'vein_thickness_avg',
+            'value': vein_thickness,
+            'threshold': VEIN_THICKNESS_DEFICIENT_HIGH,
+            'type': 'secondary',
+            'meaning': (
+                f"Average vein thickness ({vein_thickness:.2f}px) is above the healthy baseline "
+                f"({VEIN_THICKNESS_DEFICIENT_HIGH:.2f}px). Enlarged, corky veins can be a "
+                f"secondary sign of specific nutrient stresses."
+            ),
+        })
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Combine and evaluate
+    # ─────────────────────────────────────────────────────────────────────────
+    if len(primary_flags) > 0:
+        verdict = VERDICT_NOT_HEALTHY
+        flags = primary_flags + secondary_flags
     else:
         verdict = VERDICT_HEALTHY
+        flags = []  # Secondary flags alone do not trigger failure
+        
+    total_flags = len(flags)
 
     # ── Build reasoning string ─────────────────────────────────────────
     reasoning = _build_reasoning(verdict, flags, features)
@@ -268,7 +221,7 @@ def _build_reasoning(verdict: str, flags: list, features: dict) -> str:
         lines.append(f"  • Yellow pixel ratio: {features.get('yellow_pixel_ratio', 0):.1%}")
         lines.append(f"  • Excess Green Index: {features.get('excess_green_index', 0):.4f}")
         lines.append(f"  • DGCI: {features.get('dgci', 0):.4f}")
-        lines.append(f"  • Mean saturation: {features.get('mean_saturation', 0):.1f}")
+        lines.append(f"  • Color Spatial Variance: {features.get('color_spatial_variance', 0):.1f}")
     else:
         lines.append(
             f"{len(flags)} feature(s) outside the healthy baseline range:"
@@ -279,81 +232,8 @@ def _build_reasoning(verdict: str, flags: list, features: dict) -> str:
             lines.append(f"  {i}. {flag['meaning']}")
             lines.append("")
 
-        # Identify potential deficiency patterns
-        patterns = _identify_deficiency_patterns(flags)
-        if patterns:
-            lines.append("Possible deficiency patterns:")
-            for pattern in patterns:
-                lines.append(f"  -> {pattern}")
-            lines.append("")
-
         lines.append(
-            "NOTE: This assessment is based on image analysis of leaf color "
-            "and vein architecture. It identifies patterns consistent with "
-            "known nutrient deficiency symptoms but is not a definitive "
-            "diagnosis. For confirmation, consult a plant specialist or "
-            "conduct soil/tissue testing."
+            "Deficiency-type analysis: not yet implemented — coming in a later stage."
         )
 
     return "\n".join(lines)
-
-
-def _identify_deficiency_patterns(flags: list) -> list:
-    """
-    Match the combination of flagged features to known deficiency patterns.
-
-    This uses the Reference Vocabulary from goal.md to describe patterns
-    in appropriate botanical terms with hedging language.
-
-    Args:
-        flags: List of flagged feature dicts.
-
-    Returns:
-        List of pattern description strings.
-    """
-    patterns = []
-    flag_names = {f['feature'] for f in flags}
-
-    # Nitrogen deficiency: uniform yellowing, low ExG, low DGCI, reduced veins
-    if ('yellow_pixel_ratio' in flag_names and
-            ('excess_green_index' in flag_names or 'dgci' in flag_names)):
-        if 'interveinal_contrast' not in flag_names:
-            patterns.append(
-                "Pattern consistent with nitrogen deficiency: uniform chlorosis "
-                "(general yellowing without preferential vein retention) combined "
-                "with reduced green color indices."
-            )
-
-    # Magnesium deficiency: interveinal chlorosis (veins stay green, tissue yellows)
-    if 'interveinal_contrast' in flag_names and 'yellow_pixel_ratio' in flag_names:
-        patterns.append(
-            "Pattern consistent with magnesium deficiency: interveinal chlorosis "
-            "(tissue between veins is yellowing while veins retain green color), "
-            "a classic Mg-deficiency signature in older leaves."
-        )
-
-    # Iron deficiency: similar interveinal pattern but typically on younger leaves
-    if 'interveinal_contrast' in flag_names and 'mean_saturation' in flag_names:
-        patterns.append(
-            "Pattern may also be consistent with iron deficiency: interveinal "
-            "chlorosis with reduced color saturation. Iron deficiency typically "
-            "appears on younger leaves first (not distinguishable from Mg without "
-            "knowing leaf age)."
-        )
-
-    # Vein architecture degradation
-    if 'vein_density' in flag_names:
-        patterns.append(
-            "Reduced vein density may indicate impaired vascular development, "
-            "which can result from prolonged nutrient stress or other "
-            "environmental factors."
-        )
-
-    if not patterns:
-        patterns.append(
-            "The observed feature anomalies do not clearly match a single "
-            "known deficiency pattern. Multiple mild deviations detected — "
-            "continued monitoring recommended."
-        )
-
-    return patterns

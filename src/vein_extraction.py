@@ -180,7 +180,7 @@ def skeletonize_veins(vein_mask: np.ndarray) -> np.ndarray:
 
     # Remove very small objects before skeletonizing (noise)
     vein_clean = remove_small_objects(vein_bool,
-                                      min_size=MIN_SKELETON_BRANCH_LENGTH,
+                                      max_size=MIN_SKELETON_BRANCH_LENGTH,
                                       connectivity=2)
 
     # Skeletonize

@@ -26,6 +26,7 @@ from src.preprocessing import (
     preprocess
 )
 from src.segmentation import segment_leaf
+from src.species_check import verify_hibiscus_species
 from src.vein_extraction import extract_veins
 from src.feature_extraction import extract_all_features
 from src.decision_engine import evaluate
@@ -84,12 +85,6 @@ def run_pipeline(backlit_path: str,
     backlit_resized = resize_to_working_resolution(backlit_raw)
     frontlit_resized = resize_to_working_resolution(frontlit_raw)
 
-    if use_interactive_roi:
-        print(f"       Opening interactive ROI selection window...")
-        roi_mask = select_circle_roi(frontlit_resized)
-    else:
-        roi_mask = None
-
     backlit_preprocessed = normalize_brightness(denoise(backlit_resized))
     frontlit_preprocessed = normalize_brightness(denoise(frontlit_resized))
 
@@ -99,24 +94,45 @@ def run_pipeline(backlit_path: str,
     # ── Step 2: Segment leaf ──────────────────────────────────────────
     print(f"[2/6] Segmenting leaf from background...")
 
-    # Use frontlit image for segmentation (more natural colors for HSV thresholding)
     seg_result = segment_leaf(frontlit_preprocessed)
     mask = seg_result['mask']
-    
-    if roi_mask is not None:
+    validation = seg_result['validation']
+
+    if not validation['valid']:
+        for issue in validation['issues']:
+            print(f"       ! {issue}")
+
+    # ── Step 1.5: Species Check (Hard Gate) ───────────────────────────
+    species_res = verify_hibiscus_species(mask)
+    if not species_res['is_hibiscus']:
+        print("Species Check: The leaf is NOT Hibiscus (Rosa-sinensis). Analysis aborted.")
+        print(f"       Reason: {species_res['reason']}")
+        return {
+            'image_id': image_id,
+            'verdict_result': {
+                'verdict': 'Aborted (Not Hibiscus)', 
+                'reasoning': species_res['reason'], 
+                'confidence_signals': 0
+            },
+            'report_text': f"Species Check Failed:\nThe leaf is NOT Hibiscus (Rosa-sinensis). Analysis aborted.\nReason: {species_res['reason']}",
+            'output_files': []
+        }
+    else:
+        print("Species Check: The leaf is Hibiscus (Rosa-sinensis). Proceeding with analysis.")
+
+    # ── Step 2: Interactive ROI Tracing ───────────────────────────────
+    if use_interactive_roi:
+        print(f"       Opening interactive ROI selection window...")
+        roi_mask = select_circle_roi(frontlit_resized)
         mask = cv2.bitwise_and(mask, roi_mask)
         
     leaf_area = cv2.countNonZero(mask)
-    validation = seg_result['validation']
+    
     # Update leaf area fraction based on ROI-intersected mask
     h, w = mask.shape
     validation['leaf_area_pixels'] = leaf_area
     validation['leaf_area_fraction'] = leaf_area / (h * w)
-
     print(f"       Leaf area: {leaf_area:,} pixels ({validation['leaf_area_fraction']:.1%} of frame)")
-    if not validation['valid']:
-        for issue in validation['issues']:
-            print(f"       ! {issue}")
 
     # ── Step 3: Extract veins from backlit image ──────────────────────
     print(f"[3/6] Extracting vein architecture from backlit image...")
@@ -125,6 +141,24 @@ def run_pipeline(backlit_path: str,
 
     print(f"       Vein pixels: {vein_result['vein_pixel_count']:,}")
     print(f"       Branch points: {vein_result['branch_point_count']}")
+
+    # Save and show vein overlay confirmation
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
+        overlay_path = os.path.join(output_dir, f"{image_id}_vein_overlay.jpg")
+        cv2.imwrite(overlay_path, vein_result['debug_overlay'])
+        output_files.append(overlay_path)
+
+    print(f"       Displaying vein overlay for visual confirmation...")
+    window_name = "Vein Skeleton Confirmation (Press any key to continue)"
+    cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+    cv2.imshow(window_name, vein_result['debug_overlay'])
+    cv2.waitKey(0)
+    try:
+        if cv2.getWindowProperty(window_name, cv2.WND_PROP_VISIBLE) >= 1:
+            cv2.destroyWindow(window_name)
+    except cv2.error:
+        pass
 
     # ── Step 4: Extract features ──────────────────────────────────────
     print(f"[4/6] Computing feature values...")
@@ -160,11 +194,6 @@ def run_pipeline(backlit_path: str,
         print(f"       Report saved: {report_path}")
 
         if save_debug:
-            # Save debug overlay
-            overlay_path = os.path.join(output_dir, f"{image_id}_vein_overlay.jpg")
-            cv2.imwrite(overlay_path, vein_result['debug_overlay'])
-            output_files.append(overlay_path)
-
             # Save annotated composite image
             annotated = generate_annotated_image(
                 frontlit_preprocessed, vein_result['debug_overlay'],

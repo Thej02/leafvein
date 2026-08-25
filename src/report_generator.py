@@ -14,7 +14,19 @@ with the technical feature values available for reference.
 import cv2
 import numpy as np
 import os
+import sys
 from datetime import datetime
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from config.thresholds import (
+    YELLOW_RATIO_DEFICIENT,
+    EXG_HEALTHY_LOW,
+    DGCI_HEALTHY_LOW,
+    INTERVEINAL_CONTRAST_THRESHOLD,
+    COLOR_SPATIAL_VARIANCE_MAX,
+    VEIN_DENSITY_DEFICIENT,
+    VEIN_THICKNESS_DEFICIENT_HIGH,
+)
 
 
 def generate_text_report(image_id: str,
@@ -65,20 +77,21 @@ def generate_text_report(image_id: str,
     lines.append("  MEASURED FEATURES")
     lines.append("-" * 70)
     lines.append("")
-    lines.append("  Vein Architecture (from backlit image):")
-    lines.append(f"    * Vein density:          {features.get('vein_density', 0):.6f}")
-    lines.append(f"    * Vein thickness (avg):  {features.get('vein_thickness_avg', 0):.2f} px")
+    lines.append("  Vein Architecture (Secondary Factors):")
+    lines.append(f"    * Vein density:          {features.get('vein_density', 0):.6f}  (Fail if < {VEIN_DENSITY_DEFICIENT:.6f})")
+    lines.append(f"    * Vein thickness (avg):  {features.get('vein_thickness_avg', 0):.2f} px (Fail if > {VEIN_THICKNESS_DEFICIENT_HIGH:.2f})")
     lines.append(f"    * Branch points:         {features.get('branch_point_count', 0)}")
     lines.append(f"    * Vein pixels:           {features.get('vein_pixel_count', 0):,}")
     lines.append(f"    * Leaf area:             {features.get('leaf_area_pixels', 0):,} px")
     lines.append("")
-    lines.append("  Color / Chlorosis (from front-lit image):")
+    lines.append("  Color / Chlorosis (Primary Factors):")
     lines.append(f"    * Mean hue:              {features.get('mean_hue', 0):.1f}")
     lines.append(f"    * Mean saturation:       {features.get('mean_saturation', 0):.1f}")
-    lines.append(f"    * Yellow pixel ratio:    {features.get('yellow_pixel_ratio', 0):.2%}")
-    lines.append(f"    * Excess Green Index:    {features.get('excess_green_index', 0):.6f}")
-    lines.append(f"    * DGCI:                  {features.get('dgci', 0):.6f}")
-    lines.append(f"    * Interveinal contrast:  {features.get('interveinal_contrast', 0):.1f}")
+    lines.append(f"    * Yellow pixel ratio:    {features.get('yellow_pixel_ratio', 0):.2%}  (Fail if > {YELLOW_RATIO_DEFICIENT:.2%})")
+    lines.append(f"    * Excess Green Index:    {features.get('excess_green_index', 0):.6f}  (Fail if < {EXG_HEALTHY_LOW:.6f})")
+    lines.append(f"    * DGCI:                  {features.get('dgci', 0):.6f}  (Fail if < {DGCI_HEALTHY_LOW:.6f})")
+    lines.append(f"    * Interveinal contrast:  {features.get('interveinal_contrast', 0):.1f}  (Fail if > {INTERVEINAL_CONTRAST_THRESHOLD:.1f})")
+    lines.append(f"    * Color spatial var:     {features.get('color_spatial_variance', 0):.1f}  (Fail if > {COLOR_SPATIAL_VARIANCE_MAX:.1f})")
     lines.append("")
 
     # Reasoning
@@ -194,7 +207,7 @@ def generate_annotated_image(original_image: np.ndarray,
                      font, font_scale, color_yellow, 1)
         y += line_height
         for flag in flags[:5]:  # Show up to 5 flags
-            text = f"! {flag['feature']}: {flag['severity']}"
+            text = f"! {flag['feature']} ({flag['type']})"
             cv2.putText(panel, text, (10, y), font, font_scale - 0.05, color_yellow, 1)
             y += line_height
 
