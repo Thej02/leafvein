@@ -82,32 +82,34 @@ YELLOW_HSV_UPPER = (45, 255, 255)
 
 # Yellow pixel ratio (fraction of leaf pixels in yellow HSV band)
 # Calibration method: Adjusted to catch pale/mottled yellowing (>35%)
-YELLOW_RATIO_DEFICIENT = nan
+YELLOW_RATIO_DEFICIENT = 0.35
 
 # Excess Green Index (ExG = 2G − R − B, normalized per pixel, then averaged)
 # Calibration method: Healthy mean (0.619) - 1 std (0.114)
-EXG_HEALTHY_LOW = nan
+EXG_HEALTHY_LOW = 0.50
 
 # Dark Green Color Index (DGCI, standard turf formula)
 # Calibration method: Marginally below healthy mean (0.531)
-DGCI_HEALTHY_LOW = nan
+DGCI_HEALTHY_LOW = 0.45
 
 # Interveinal contrast (difference in mean green between on-vein and off-vein regions)
 # Calibration method: Expected to be high in Mg/Fe deficiency. Set above typical healthy baseline.
-INTERVEINAL_CONTRAST_THRESHOLD = nan
+INTERVEINAL_CONTRAST_THRESHOLD = 50.0
 
 # Color spatial variance (confound check for localized damage vs systemic deficiency)
 # Calibration method: Adjusted to catch high variance mottling (e.g., >500)
-COLOR_SPATIAL_VARIANCE_MAX = nan
+COLOR_SPATIAL_VARIANCE_MAX = 500.0
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SECONDARY FACTORS (Vein Geometry)
-# These factors only support an already-failing primary factor.
+# ─────────────────────────────────────────────────────────────────────────────
+# These factors do NOT trigger a NOT HEALTHY verdict on their own. They are
+# appended as supporting evidence if a primary color factor fails.
 
-# Vein density (vein skeleton pixels / leaf area pixels)
-# Calibration method: Below healthy mean (0.048)
-VEIN_DENSITY_DEFICIENT = nan
+# Vein density (vein pixels / leaf area)
+# Calibration method: Healthy mean (0.048) - 1 std (0.011)
+VEIN_DENSITY_DEFICIENT = 0.040
 
-# Vein thickness average (pixels, from distance transform along skeleton)
-# Calibration method: Above healthy mean (7.49) — Citrus evidence shows Mg deficiency enlarges veins
-VEIN_THICKNESS_DEFICIENT_HIGH = nan
+# Vein thickness (average pixel width)
+# Calibration method: Healthy mean (7.49) + slightly below 1 std (0.68)
+VEIN_THICKNESS_DEFICIENT_HIGH = 8.00

@@ -134,54 +134,64 @@ def main():
     print("\n--- Calibration Results ---")
     new_thresholds = {}
     
+    def get_std(series):
+        std = series.std()
+        return 0.0 if pd.isna(std) else std
+
     # 1. Yellow Ratio (Fail if >)
-    # Mean of healthy + 1.5 * std. If std is tiny, at least use mean + 0.05
     h_mean = healthy_df['yellow_pixel_ratio'].mean()
-    h_std = healthy_df['yellow_pixel_ratio'].std()
-    thresh_yr = h_mean + 1.5 * h_std
+    d_mean = deficient_df['yellow_pixel_ratio'].mean()
+    h_std = get_std(healthy_df['yellow_pixel_ratio'])
+    thresh_yr = h_mean + 1.5 * h_std if h_std > 0 else (h_mean + d_mean) / 2
     if thresh_yr < 0.05: thresh_yr = 0.05
     new_thresholds['YELLOW_RATIO_DEFICIENT'] = float(thresh_yr)
     print(f"YELLOW_RATIO_DEFICIENT: {thresh_yr:.4f} (Healthy Mean: {h_mean:.4f}, Std: {h_std:.4f})")
     
     # 2. ExG (Fail if <)
     h_mean = healthy_df['excess_green_index'].mean()
-    h_std = healthy_df['excess_green_index'].std()
-    thresh_exg = h_mean - 1.5 * h_std
+    d_mean = deficient_df['excess_green_index'].mean()
+    h_std = get_std(healthy_df['excess_green_index'])
+    thresh_exg = h_mean - 1.5 * h_std if h_std > 0 else (h_mean + d_mean) / 2
     new_thresholds['EXG_HEALTHY_LOW'] = float(thresh_exg)
     print(f"EXG_HEALTHY_LOW: {thresh_exg:.4f} (Healthy Mean: {h_mean:.4f}, Std: {h_std:.4f})")
     
     # 3. DGCI (Fail if <)
     h_mean = healthy_df['dgci'].mean()
-    h_std = healthy_df['dgci'].std()
-    thresh_dgci = h_mean - 1.5 * h_std
+    d_mean = deficient_df['dgci'].mean()
+    h_std = get_std(healthy_df['dgci'])
+    thresh_dgci = h_mean - 1.5 * h_std if h_std > 0 else (h_mean + d_mean) / 2
     new_thresholds['DGCI_HEALTHY_LOW'] = float(thresh_dgci)
     print(f"DGCI_HEALTHY_LOW: {thresh_dgci:.4f} (Healthy Mean: {h_mean:.4f}, Std: {h_std:.4f})")
     
     # 4. Interveinal Contrast (Fail if >)
     h_mean = healthy_df['interveinal_contrast'].mean()
-    h_std = healthy_df['interveinal_contrast'].std()
-    thresh_iv = h_mean + 1.5 * h_std
+    d_mean = deficient_df['interveinal_contrast'].mean()
+    h_std = get_std(healthy_df['interveinal_contrast'])
+    thresh_iv = h_mean + 1.5 * h_std if h_std > 0 else (h_mean + d_mean) / 2
     new_thresholds['INTERVEINAL_CONTRAST_THRESHOLD'] = float(thresh_iv)
     print(f"INTERVEINAL_CONTRAST_THRESHOLD: {thresh_iv:.4f} (Healthy Mean: {h_mean:.4f}, Std: {h_std:.4f})")
     
     # 5. Color Spatial Variance (Fail if >)
     h_mean = healthy_df['color_spatial_variance'].mean()
-    h_std = healthy_df['color_spatial_variance'].std()
-    thresh_var = h_mean + 1.5 * h_std
+    d_mean = deficient_df['color_spatial_variance'].mean()
+    h_std = get_std(healthy_df['color_spatial_variance'])
+    thresh_var = h_mean + 1.5 * h_std if h_std > 0 else (h_mean + d_mean) / 2
     new_thresholds['COLOR_SPATIAL_VARIANCE_MAX'] = float(thresh_var)
     print(f"COLOR_SPATIAL_VARIANCE_MAX: {thresh_var:.4f} (Healthy Mean: {h_mean:.4f}, Std: {h_std:.4f})")
     
     # 6. Vein Density (Fail if <)
     h_mean = healthy_df['vein_density'].mean()
-    h_std = healthy_df['vein_density'].std()
-    thresh_vd = h_mean - 1.5 * h_std
+    d_mean = deficient_df['vein_density'].mean()
+    h_std = get_std(healthy_df['vein_density'])
+    thresh_vd = h_mean - 1.5 * h_std if h_std > 0 else (h_mean + d_mean) / 2
     new_thresholds['VEIN_DENSITY_DEFICIENT'] = float(thresh_vd)
     print(f"VEIN_DENSITY_DEFICIENT: {thresh_vd:.6f} (Healthy Mean: {h_mean:.4f}, Std: {h_std:.4f})")
     
     # 7. Vein Thickness (Fail if >)
     h_mean = healthy_df['vein_thickness_avg'].mean()
-    h_std = healthy_df['vein_thickness_avg'].std()
-    thresh_vt = h_mean + 1.5 * h_std
+    d_mean = deficient_df['vein_thickness_avg'].mean()
+    h_std = get_std(healthy_df['vein_thickness_avg'])
+    thresh_vt = h_mean + 1.5 * h_std if h_std > 0 else (h_mean + d_mean) / 2
     new_thresholds['VEIN_THICKNESS_DEFICIENT_HIGH'] = float(thresh_vt)
     print(f"VEIN_THICKNESS_DEFICIENT_HIGH: {thresh_vt:.4f} (Healthy Mean: {h_mean:.4f}, Std: {h_std:.4f})")
     
