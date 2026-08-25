@@ -29,6 +29,7 @@ from config.thresholds import (
     VEIN_DENSITY_DEFICIENT,
     VEIN_THICKNESS_DEFICIENT_HIGH,
 )
+from src.deficiency_typing import identify_deficiency
 
 
 # Verdict constants
@@ -58,6 +59,7 @@ def evaluate(features: dict) -> dict:
           'confidence_signals': int — how many individual features flagged deficiency
           'reasoning': str — human-readable explanation of the verdict
           'flags': list of dict — each flagged feature with its value, threshold, and meaning
+          'deficiency_assessment': dict (if NOT HEALTHY) — with 'pattern_name' and 'assessment_text'
     """
     # ─────────────────────────────────────────────────────────────────────────
     # Primary Factors (Color / Chlorosis)
@@ -170,9 +172,11 @@ def evaluate(features: dict) -> dict:
     # ─────────────────────────────────────────────────────────────────────────
     # Combine and evaluate
     # ─────────────────────────────────────────────────────────────────────────
+    deficiency_assessment = None
     if len(primary_flags) > 0:
         verdict = VERDICT_NOT_HEALTHY
         flags = primary_flags + secondary_flags
+        deficiency_assessment = identify_deficiency(features, flags)
     else:
         verdict = VERDICT_HEALTHY
         flags = []  # Secondary flags alone do not trigger failure
@@ -180,17 +184,18 @@ def evaluate(features: dict) -> dict:
     total_flags = len(flags)
 
     # ── Build reasoning string ─────────────────────────────────────────
-    reasoning = _build_reasoning(verdict, flags, features)
+    reasoning = _build_reasoning(verdict, flags, features, deficiency_assessment)
 
     return {
         'verdict': verdict,
         'confidence_signals': total_flags,
         'reasoning': reasoning,
         'flags': flags,
+        'deficiency_assessment': deficiency_assessment,
     }
 
 
-def _build_reasoning(verdict: str, flags: list, features: dict) -> str:
+def _build_reasoning(verdict: str, flags: list, features: dict, deficiency_assessment: dict = None) -> str:
     """
     Build a human-readable reasoning string explaining the verdict.
 
@@ -201,6 +206,7 @@ def _build_reasoning(verdict: str, flags: list, features: dict) -> str:
         verdict: The determined verdict string.
         flags: List of flagged feature dicts.
         features: Original feature dict (for reporting values even if not flagged).
+        deficiency_assessment: Output of identify_deficiency (if NOT HEALTHY).
 
     Returns:
         Multi-line human-readable reasoning string.
@@ -232,8 +238,11 @@ def _build_reasoning(verdict: str, flags: list, features: dict) -> str:
             lines.append(f"  {i}. {flag['meaning']}")
             lines.append("")
 
-        lines.append(
-            "Deficiency-type analysis: not yet implemented — coming in a later stage."
-        )
+        lines.append("DEFICIENCY-TYPE ANALYSIS:")
+        if deficiency_assessment:
+            for line in deficiency_assessment['assessment_text'].split('\n'):
+                lines.append(f"  {line}")
+        else:
+            lines.append("  Analysis not available.")
 
     return "\n".join(lines)

@@ -317,7 +317,11 @@ def generate_unhealthy_regions_image(overlay_image: np.ndarray,
 
     # Add legend at the top
     font = cv2.FONT_HERSHEY_SIMPLEX
-    legend_text = f"Flagged by: {', '.join(failed_factors)}"
+    if 'deficiency_assessment' in verdict_result and verdict_result['deficiency_assessment']:
+        pattern_name = verdict_result['deficiency_assessment']['pattern_name']
+        legend_text = f"Pattern: {pattern_name}"
+    else:
+        legend_text = f"Flagged by: {', '.join(failed_factors)}"
     cv2.putText(result_image, legend_text, (20, 30), font, 0.7, circle_color, 2)
 
     return result_image

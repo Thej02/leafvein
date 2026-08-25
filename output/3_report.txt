@@ -3,9 +3,9 @@
 ======================================================================
 
   Image ID:      3
-  Date:          2026-08-25 09:14:52
+  Date:          2026-08-25 16:05:47
   Verdict:       Leaf Health Status: NOT HEALTHY
-  Signals:       3 feature(s) flagged
+  Signals:       4 feature(s) flagged
 
 ----------------------------------------------------------------------
   SEGMENTATION QUALITY
@@ -31,7 +31,7 @@
     * Excess Green Index:    0.546499  (Fail if < 0.632374)
     * DGCI:                  0.518864  (Fail if < 0.595351)
     * Interveinal contrast:  29.2  (Fail if > 62.7)
-    * Color spatial var:     522.6  (Fail if > 676.9)
+    * Color spatial var:     522.6  (Fail if > 500.0)
 
 ----------------------------------------------------------------------
   ANALYSIS REASONING
@@ -39,7 +39,7 @@
 
   VERDICT: Leaf Health Status: NOT HEALTHY
   
-  3 feature(s) outside the healthy baseline range:
+  4 feature(s) outside the healthy baseline range:
   
     1. Yellow pixel ratio (39.1%) is above the healthy baseline (>25.8%). Extensive yellowing (chlorosis) suggests a nutrient deficiency.
   
@@ -47,7 +47,13 @@
   
     3. Dark Green Color Index (0.5189) is below the healthy threshold (0.5954). DGCI correlates with overall leaf health — low values suggest a pale, chlorotic leaf.
   
-  Deficiency-type analysis: not yet implemented — coming in a later stage.
+    4. Color spatial variance (522.6) is very high (>500.0). This suggests sharp, localized patches (e.g., pest damage, fungal spotting, or physical injury) rather than diffuse systemic nutrient deficiency. Closer inspection recommended.
+  
+  DEFICIENCY-TYPE ANALYSIS:
+    Pattern consistent with possible pest/disease/damage.
+    Color spatial variance (522.6) is high (>500.0), indicating sharp, localized, patchy discoloration rather than diffuse nutrient deficiency.
+    Recommend closer visual inspection or expert consultation.
+    This is a pattern-matching estimate based on color and vein signals only — not a substitute for soil/tissue testing or expert diagnosis.
 
   Flagged regions visualized in 3_unhealthy_regions.jpg
 

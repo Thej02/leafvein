@@ -98,7 +98,7 @@ INTERVEINAL_CONTRAST_THRESHOLD = 62.692146
 
 # Color spatial variance (confound check for localized damage vs systemic deficiency)
 # Calibration method: Adjusted to catch high variance mottling (e.g., >500)
-COLOR_SPATIAL_VARIANCE_MAX = 676.898837
+COLOR_SPATIAL_VARIANCE_MAX = 500.0
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SECONDARY FACTORS (Vein Geometry)

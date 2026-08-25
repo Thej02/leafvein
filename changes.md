@@ -13,6 +13,20 @@ This document logs the changes made to enforce a strict pipeline execution order
 3. **Placeholder Message**: When the leaf is deemed NOT HEALTHY, a placeholder message `"Deficiency-type analysis: not yet implemented — coming in a later stage."` is explicitly appended to the reasoning.
 4. **Failed Factors List**: The reasoning clearly lists which individual factors failed without naming the associated deficiency.
 
+## 2026-08-25 — Implemented Stage 8.5 (Deficiency-Type Identification)
+**Stage:** Stage 8.5 (Deficiency-Type Identification)
+**What changed:** 
+1. Created `src/deficiency_typing.py` with `identify_deficiency()`, implementing the specific rule table (pest confound vs iron/magnesium vs nitrogen vs unknown fallback).
+2. Connected `identify_deficiency()` to `src/decision_engine.py` so it is only called when the verdict is NOT HEALTHY, appending the returned assessment text to the reasoning string instead of the placeholder.
+3. Updated `src/report_generator.py` to use the identified pattern name in the top legend of the `{image_id}_unhealthy_regions.jpg` image.
+4. Added unit tests for all 4 pattern outcomes and verified that it is not called for a HEALTHY verdict.
+5. Adjusted `COLOR_SPATIAL_VARIANCE_MAX` threshold to `500.0` in `config/thresholds.py` per the comment intent ("Adjusted to catch high variance mottling (e.g., >500)") to ensure the mottled test case (`3.jpeg`) correctly triggers the pest confound check.
+**Why:** User requested the full implementation of Stage 8.5 using the explicitly defined patterns for hibiscus, and specifically wanted to see it handle the `3.jpeg` mottled leaf case as a pest/damage confound.
+**Affected files:** `src/deficiency_typing.py`, `src/decision_engine.py`, `src/report_generator.py`, `tests/test_deficiency_typing.py`, `config/thresholds.py`
+**Follow-up needed:** No.
+
+---
+
 ## 2026-08-25 — Implemented Unhealthy-Region Circling (Stage 10)
 **Stage:** Stage 10 (Report Generator & Interface)
 **What changed:** 
