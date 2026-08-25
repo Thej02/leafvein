@@ -3,7 +3,7 @@
 ======================================================================
 
   Image ID:      1
-  Date:          2026-08-25 08:24:37
+  Date:          2026-08-25 08:35:00
   Verdict:       Leaf Health Status: NOT HEALTHY
   Signals:       2 feature(s) flagged
 
@@ -18,8 +18,8 @@
 ----------------------------------------------------------------------
 
   Vein Architecture (Secondary Factors):
-    * Vein density:          0.058114  (Fail if < 0.040000)
-    * Vein thickness (avg):  6.96 px (Fail if > 8.00)
+    * Vein density:          0.058114  (Fail if < 0.050208)
+    * Vein thickness (avg):  6.96 px (Fail if > 7.44)
     * Branch points:         3109
     * Vein pixels:           18,624
     * Leaf area:             320,473 px
@@ -27,11 +27,11 @@
   Color / Chlorosis (Primary Factors):
     * Mean hue:              73.4
     * Mean saturation:       200.4
-    * Yellow pixel ratio:    2.08%  (Fail if > 35.00%)
-    * Excess Green Index:    0.751360  (Fail if < 0.500000)
-    * DGCI:                  0.713370  (Fail if < 0.450000)
-    * Interveinal contrast:  52.4  (Fail if > 50.0)
-    * Color spatial var:     566.5  (Fail if > 500.0)
+    * Yellow pixel ratio:    2.08%  (Fail if > 25.83%)
+    * Excess Green Index:    0.751360  (Fail if < 0.632374)
+    * DGCI:                  0.713370  (Fail if < 0.595351)
+    * Interveinal contrast:  52.2  (Fail if > 42.7)
+    * Color spatial var:     564.1  (Fail if > 517.7)
 
 ----------------------------------------------------------------------
   ANALYSIS REASONING
@@ -41,9 +41,9 @@
   
   2 feature(s) outside the healthy baseline range:
   
-    1. Interveinal contrast (52.4) exceeds the threshold (50.0). This 'green veins with yellowing between veins' pattern is a signature of nutrient stress.
+    1. Interveinal contrast (52.2) exceeds the threshold (42.7). This 'green veins with yellowing between veins' pattern is a signature of nutrient stress.
   
-    2. Color spatial variance (566.5) is very high (>500.0). This suggests sharp, localized patches (e.g., pest damage, fungal spotting, or physical injury) rather than diffuse systemic nutrient deficiency. Closer inspection recommended.
+    2. Color spatial variance (564.1) is very high (>517.7). This suggests sharp, localized patches (e.g., pest damage, fungal spotting, or physical injury) rather than diffuse systemic nutrient deficiency. Closer inspection recommended.
   
   Deficiency-type analysis: not yet implemented — coming in a later stage.
 

@@ -82,23 +82,23 @@ YELLOW_HSV_UPPER = (45, 255, 255)
 
 # Yellow pixel ratio (fraction of leaf pixels in yellow HSV band)
 # Calibration method: Adjusted to catch pale/mottled yellowing (>35%)
-YELLOW_RATIO_DEFICIENT = 0.35
+YELLOW_RATIO_DEFICIENT = 0.258292
 
 # Excess Green Index (ExG = 2G − R − B, normalized per pixel, then averaged)
 # Calibration method: Healthy mean (0.619) - 1 std (0.114)
-EXG_HEALTHY_LOW = 0.50
+EXG_HEALTHY_LOW = 0.632374
 
 # Dark Green Color Index (DGCI, standard turf formula)
 # Calibration method: Marginally below healthy mean (0.531)
-DGCI_HEALTHY_LOW = 0.45
+DGCI_HEALTHY_LOW = 0.595351
 
 # Interveinal contrast (difference in mean green between on-vein and off-vein regions)
 # Calibration method: Expected to be high in Mg/Fe deficiency. Set above typical healthy baseline.
-INTERVEINAL_CONTRAST_THRESHOLD = 50.0
+INTERVEINAL_CONTRAST_THRESHOLD = 62.692146
 
 # Color spatial variance (confound check for localized damage vs systemic deficiency)
 # Calibration method: Adjusted to catch high variance mottling (e.g., >500)
-COLOR_SPATIAL_VARIANCE_MAX = 500.0
+COLOR_SPATIAL_VARIANCE_MAX = 676.898837
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SECONDARY FACTORS (Vein Geometry)
@@ -108,8 +108,8 @@ COLOR_SPATIAL_VARIANCE_MAX = 500.0
 
 # Vein density (vein pixels / leaf area)
 # Calibration method: Healthy mean (0.048) - 1 std (0.011)
-VEIN_DENSITY_DEFICIENT = 0.040
+VEIN_DENSITY_DEFICIENT = 0.050208
 
 # Vein thickness (average pixel width)
 # Calibration method: Healthy mean (7.49) + slightly below 1 std (0.68)
-VEIN_THICKNESS_DEFICIENT_HIGH = 8.00
+VEIN_THICKNESS_DEFICIENT_HIGH = 7.653426
