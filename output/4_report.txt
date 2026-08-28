@@ -3,7 +3,7 @@
 ======================================================================
 
   Image ID:      4
-  Date:          2026-08-25 09:29:00
+  Date:          2026-08-27 19:38:00
   Verdict:       Leaf Health Status: NOT HEALTHY
   Signals:       3 feature(s) flagged
 
@@ -11,27 +11,27 @@
   SEGMENTATION QUALITY
 ----------------------------------------------------------------------
   Status:        PASS
-  Leaf area:     389,880 pixels (49.6% of frame)
+  Leaf area:     464,184 pixels (59.0% of frame)
 
 ----------------------------------------------------------------------
   MEASURED FEATURES
 ----------------------------------------------------------------------
 
   Vein Architecture (Secondary Factors):
-    * Vein density:          0.048889  (Fail if < 0.050208)
-    * Vein thickness (avg):  7.78 px (Fail if > 7.65)
-    * Branch points:         2537
-    * Vein pixels:           19,061
-    * Leaf area:             389,880 px
+    * Vein density:          0.048629  (Fail if < 0.050208)
+    * Vein thickness (avg):  7.87 px (Fail if > 7.65)
+    * Branch points:         2950
+    * Vein pixels:           22,573
+    * Leaf area:             464,184 px
 
   Color / Chlorosis (Primary Factors):
-    * Mean hue:              65.5
-    * Mean saturation:       143.9
-    * Yellow pixel ratio:    0.54%  (Fail if > 25.83%)
-    * Excess Green Index:    0.588699  (Fail if < 0.632374)
-    * DGCI:                  0.697740  (Fail if < 0.595351)
-    * Interveinal contrast:  40.5  (Fail if > 62.7)
-    * Color spatial var:     250.4  (Fail if > 676.9)
+    * Mean hue:              65.0
+    * Mean saturation:       141.5
+    * Yellow pixel ratio:    1.14%  (Fail if > 25.83%)
+    * Excess Green Index:    0.575540  (Fail if < 0.632374)
+    * DGCI:                  0.694452  (Fail if < 0.595351)
+    * Interveinal contrast:  40.0  (Fail if > 62.7)
+    * Color spatial var:     291.8  (Fail if > 500.0)
 
 ----------------------------------------------------------------------
   ANALYSIS REASONING
@@ -41,13 +41,16 @@
   
   3 feature(s) outside the healthy baseline range:
   
-    1. Excess Green Index (0.5887) is below the healthy threshold (0.6324). This indicates reduced overall greenness, consistent with chlorophyll loss from nutrient stress.
+    1. Excess Green Index (0.5755) is below the healthy threshold (0.6324). This indicates reduced overall greenness, consistent with chlorophyll loss from nutrient stress.
   
-    2. Vein density (0.0489) is below the healthy baseline (0.0502). This may indicate impaired vascular development.
+    2. Vein density (0.0486) is below the healthy baseline (0.0502). This may indicate impaired vascular development.
   
-    3. Average vein thickness (7.78px) is above the healthy baseline (7.65px). Enlarged, corky veins can be a secondary sign of specific nutrient stresses.
+    3. Average vein thickness (7.87px) is above the healthy baseline (7.65px). Enlarged, corky veins can be a secondary sign of specific nutrient stresses.
   
-  Deficiency-type analysis: not yet implemented — coming in a later stage.
+  DEFICIENCY-TYPE ANALYSIS:
+    Leaf flagged NOT HEALTHY but does not clearly match a known deficiency signature.
+    Recommend closer inspection.
+    This is a pattern-matching estimate based on color and vein signals only — not a substitute for soil/tissue testing or expert diagnosis.
 
   Flagged regions visualized in 4_unhealthy_regions.jpg
 

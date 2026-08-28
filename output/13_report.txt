@@ -3,7 +3,7 @@
 ======================================================================
 
   Image ID:      13
-  Date:          2026-08-25 16:32:41
+  Date:          2026-08-26 08:28:47
   Verdict:       Leaf Health Status: NOT HEALTHY
   Signals:       3 feature(s) flagged
 
@@ -11,27 +11,27 @@
   SEGMENTATION QUALITY
 ----------------------------------------------------------------------
   Status:        PASS
-  Leaf area:     107,505 pixels (13.7% of frame)
+  Leaf area:     76,336 pixels (9.7% of frame)
 
 ----------------------------------------------------------------------
   MEASURED FEATURES
 ----------------------------------------------------------------------
 
   Vein Architecture (Secondary Factors):
-    * Vein density:          0.052379  (Fail if < 0.050208)
-    * Vein thickness (avg):  6.84 px (Fail if > 7.65)
-    * Branch points:         716
-    * Vein pixels:           5,631
-    * Leaf area:             107,505 px
+    * Vein density:          0.055347  (Fail if < 0.050208)
+    * Vein thickness (avg):  6.45 px (Fail if > 7.65)
+    * Branch points:         512
+    * Vein pixels:           4,225
+    * Leaf area:             76,336 px
 
   Color / Chlorosis (Primary Factors):
-    * Mean hue:              34.7
-    * Mean saturation:       207.3
-    * Yellow pixel ratio:    93.31%  (Fail if > 25.83%)
-    * Excess Green Index:    0.495378  (Fail if < 0.632374)
-    * DGCI:                  0.245746  (Fail if < 0.595351)
-    * Interveinal contrast:  32.0  (Fail if > 62.7)
-    * Color spatial var:     142.3  (Fail if > 500.0)
+    * Mean hue:              33.8
+    * Mean saturation:       210.7
+    * Yellow pixel ratio:    96.04%  (Fail if > 25.83%)
+    * Excess Green Index:    0.492046  (Fail if < 0.632374)
+    * DGCI:                  0.208122  (Fail if < 0.595351)
+    * Interveinal contrast:  34.9  (Fail if > 62.7)
+    * Color spatial var:     124.9  (Fail if > 500.0)
 
 ----------------------------------------------------------------------
   ANALYSIS REASONING
@@ -41,15 +41,15 @@
   
   3 feature(s) outside the healthy baseline range:
   
-    1. Yellow pixel ratio (93.3%) is above the healthy baseline (>25.8%). Extensive yellowing (chlorosis) suggests a nutrient deficiency.
+    1. Yellow pixel ratio (96.0%) is above the healthy baseline (>25.8%). Extensive yellowing (chlorosis) suggests a nutrient deficiency.
   
-    2. Excess Green Index (0.4954) is below the healthy threshold (0.6324). This indicates reduced overall greenness, consistent with chlorophyll loss from nutrient stress.
+    2. Excess Green Index (0.4920) is below the healthy threshold (0.6324). This indicates reduced overall greenness, consistent with chlorophyll loss from nutrient stress.
   
-    3. Dark Green Color Index (0.2457) is below the healthy threshold (0.5954). DGCI correlates with overall leaf health — low values suggest a pale, chlorotic leaf.
+    3. Dark Green Color Index (0.2081) is below the healthy threshold (0.5954). DGCI correlates with overall leaf health — low values suggest a pale, chlorotic leaf.
   
   DEFICIENCY-TYPE ANALYSIS:
     Pattern consistent with nitrogen deficiency (diffuse, more uniform yellowing rather than sharply vein-bounded).
-    Yellow pixel ratio (93.3%) is high (>25.8%) while interveinal contrast (32.0) remains low-to-moderate (<=62.7).
+    Yellow pixel ratio (96.0%) is high (>25.8%) while interveinal contrast (34.9) remains low-to-moderate (<=62.7).
     This is a pattern-matching estimate based on color and vein signals only — not a substitute for soil/tissue testing or expert diagnosis.
 
   Flagged regions visualized in 13_unhealthy_regions.jpg

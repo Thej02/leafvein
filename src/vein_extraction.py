@@ -253,7 +253,7 @@ def create_debug_overlay(original_image: np.ndarray,
     return overlay
 
 
-def extract_veins(image: np.ndarray, mask: np.ndarray) -> dict:
+def extract_veins(image: np.ndarray, mask: np.ndarray, save_stages_dir: str = None) -> dict:
     """
     Full vein extraction pipeline: enhance → detect → skeletonize.
 
@@ -262,6 +262,7 @@ def extract_veins(image: np.ndarray, mask: np.ndarray) -> dict:
     Args:
         image: Preprocessed BGR backlit leaf image.
         mask: Binary leaf mask from segmentation (uint8, 0 or 255).
+        save_stages_dir: Optional directory to save intermediate preprocessing images.
 
     Returns:
         Dict with keys:
@@ -297,6 +298,16 @@ def extract_veins(image: np.ndarray, mask: np.ndarray) -> dict:
     # Debug overlay
     debug_overlay = create_debug_overlay(image, skeleton, mask)
 
+    if save_stages_dir:
+        os.makedirs(save_stages_dir, exist_ok=True)
+        cv2.imwrite(os.path.join(save_stages_dir, "06_gray_masked.jpg"), gray_masked)
+        cv2.imwrite(os.path.join(save_stages_dir, "07_local_enhanced.jpg"), gray_enhanced)
+        cv2.imwrite(os.path.join(save_stages_dir, "08_adaptive_veins.jpg"), adaptive_veins)
+        cv2.imwrite(os.path.join(save_stages_dir, "09_frangi_veins.jpg"), frangi_veins)
+        cv2.imwrite(os.path.join(save_stages_dir, "10_combined_veins.jpg"), vein_mask)
+        cv2.imwrite(os.path.join(save_stages_dir, "11_skeleton.jpg"), skeleton)
+        cv2.imwrite(os.path.join(save_stages_dir, "12_vein_overlay.jpg"), debug_overlay)
+
     return {
         'vein_mask': vein_mask,
         'skeleton': skeleton,
@@ -304,3 +315,4 @@ def extract_veins(image: np.ndarray, mask: np.ndarray) -> dict:
         'branch_point_count': branch_points,
         'debug_overlay': debug_overlay,
     }
+

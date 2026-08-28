@@ -86,11 +86,22 @@ def run_pipeline(backlit_path: str,
     backlit_resized = resize_to_working_resolution(backlit_raw)
     frontlit_resized = resize_to_working_resolution(frontlit_raw)
 
-    backlit_preprocessed = normalize_brightness(denoise(backlit_resized))
-    frontlit_preprocessed = normalize_brightness(denoise(frontlit_resized))
+    backlit_denoised = denoise(backlit_resized)
+    frontlit_denoised = denoise(frontlit_resized)
+
+    backlit_preprocessed = normalize_brightness(backlit_denoised)
+    frontlit_preprocessed = normalize_brightness(frontlit_denoised)
 
     print(f"       Backlit:  {backlit_raw.shape} -> {backlit_preprocessed.shape}")
     print(f"       Frontlit: {frontlit_raw.shape} -> {frontlit_preprocessed.shape}")
+
+    # Create folder for this execution inside preprocessed_images
+    prep_dir = os.path.join("preprocessed_images", image_id)
+    os.makedirs(prep_dir, exist_ok=True)
+    cv2.imwrite(os.path.join(prep_dir, "01_raw.jpg"), backlit_raw)
+    cv2.imwrite(os.path.join(prep_dir, "02_resized.jpg"), backlit_resized)
+    cv2.imwrite(os.path.join(prep_dir, "03_denoised.jpg"), backlit_denoised)
+    cv2.imwrite(os.path.join(prep_dir, "04_normalized.jpg"), backlit_preprocessed)
 
     # ── Step 2: Segment leaf ──────────────────────────────────────────
     print(f"[2/6] Segmenting leaf from background...")
@@ -127,6 +138,8 @@ def run_pipeline(backlit_path: str,
         roi_mask = select_circle_roi(frontlit_resized)
         mask = cv2.bitwise_and(mask, roi_mask)
         
+    cv2.imwrite(os.path.join(prep_dir, "05_leaf_mask.jpg"), mask)
+
     leaf_area = cv2.countNonZero(mask)
     
     # Update leaf area fraction based on ROI-intersected mask
@@ -138,7 +151,7 @@ def run_pipeline(backlit_path: str,
     # ── Step 3: Extract veins from backlit image ──────────────────────
     print(f"[3/6] Extracting vein architecture from backlit image...")
 
-    vein_result = extract_veins(backlit_preprocessed, mask)
+    vein_result = extract_veins(backlit_preprocessed, mask, save_stages_dir=prep_dir)
 
     print(f"       Vein pixels: {vein_result['vein_pixel_count']:,}")
     print(f"       Branch points: {vein_result['branch_point_count']}")
