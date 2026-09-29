@@ -3,35 +3,35 @@
 ======================================================================
 
   Image ID:      2
-  Date:          2026-08-26 09:34:15
+  Date:          2026-09-26 13:27:17
   Verdict:       Leaf Health Status: NOT HEALTHY
-  Signals:       4 feature(s) flagged
+  Signals:       5 feature(s) flagged
 
 ----------------------------------------------------------------------
   SEGMENTATION QUALITY
 ----------------------------------------------------------------------
   Status:        PASS
-  Leaf area:     341,677 pixels (43.4% of frame)
+  Leaf area:     543,360 pixels (69.1% of frame)
 
 ----------------------------------------------------------------------
   MEASURED FEATURES
 ----------------------------------------------------------------------
 
   Vein Architecture (Secondary Factors):
-    * Vein density:          0.039669  (Fail if < 0.050208)
-    * Vein thickness (avg):  8.14 px (Fail if > 7.65)
-    * Branch points:         1680
-    * Vein pixels:           13,554
-    * Leaf area:             341,677 px
+    * Vein density:          0.035958  (Fail if < 0.050208)
+    * Vein thickness (avg):  8.26 px (Fail if > 7.65)
+    * Branch points:         2099
+    * Vein pixels:           19,538
+    * Leaf area:             543,360 px
 
   Color / Chlorosis (Primary Factors):
-    * Mean hue:              41.4
-    * Mean saturation:       202.1
-    * Yellow pixel ratio:    75.85%  (Fail if > 25.83%)
-    * Excess Green Index:    0.659338  (Fail if < 0.632374)
-    * DGCI:                  0.337908  (Fail if < 0.595351)
-    * Interveinal contrast:  32.2  (Fail if > 62.7)
-    * Color spatial var:     194.7  (Fail if > 500.0)
+    * Mean hue:              40.7
+    * Mean saturation:       181.8
+    * Yellow pixel ratio:    76.46%  (Fail if > 25.83%)
+    * Excess Green Index:    0.560267  (Fail if < 0.632374)
+    * DGCI:                  0.360808  (Fail if < 0.595351)
+    * Interveinal contrast:  37.6  (Fail if > 62.7)
+    * Color spatial var:     260.2  (Fail if > 500.0)
 
 ----------------------------------------------------------------------
   ANALYSIS REASONING
@@ -39,19 +39,21 @@
 
   VERDICT: Leaf Health Status: NOT HEALTHY
   
-  4 feature(s) outside the healthy baseline range:
+  5 feature(s) outside the healthy baseline range:
   
-    1. Yellow pixel ratio (75.9%) is above the healthy baseline (>25.8%). Extensive yellowing (chlorosis) suggests a nutrient deficiency.
+    1. Yellow pixel ratio (76.5%) is above the healthy baseline (>25.8%). Extensive yellowing (chlorosis) suggests a nutrient deficiency.
   
-    2. Dark Green Color Index (0.3379) is below the healthy threshold (0.5954). DGCI correlates with overall leaf health — low values suggest a pale, chlorotic leaf.
+    2. Excess Green Index (0.5603) is below the healthy threshold (0.6324). This indicates reduced overall greenness, consistent with chlorophyll loss from nutrient stress.
   
-    3. Vein density (0.0397) is below the healthy baseline (0.0502). This may indicate impaired vascular development.
+    3. Dark Green Color Index (0.3608) is below the healthy threshold (0.5954). DGCI correlates with overall leaf health — low values suggest a pale, chlorotic leaf.
   
-    4. Average vein thickness (8.14px) is above the healthy baseline (7.65px). Enlarged, corky veins can be a secondary sign of specific nutrient stresses.
+    4. Vein density (0.0360) is below the healthy baseline (0.0502). This may indicate impaired vascular development.
+  
+    5. Average vein thickness (8.26px) is above the healthy baseline (7.65px). Enlarged, corky veins can be a secondary sign of specific nutrient stresses.
   
   DEFICIENCY-TYPE ANALYSIS:
     Pattern consistent with nitrogen deficiency (diffuse, more uniform yellowing rather than sharply vein-bounded).
-    Yellow pixel ratio (75.9%) is high (>25.8%) while interveinal contrast (32.2) remains low-to-moderate (<=62.7).
+    Yellow pixel ratio (76.5%) is high (>25.8%) while interveinal contrast (37.6) remains low-to-moderate (<=62.7).
     This is a pattern-matching estimate based on color and vein signals only — not a substitute for soil/tissue testing or expert diagnosis.
 
   Flagged regions visualized in 2_unhealthy_regions.jpg

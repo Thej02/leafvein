@@ -1,0 +1,14 @@
+Rosa-sinensis Leaf Health: Multi-Methodology Severity Comparison
+======================================================================
+
+Pairwise Agreement:
+  Rule-Based vs Random Forest : 85.7%
+  Rule-Based vs MobileNetV2   : 78.6%
+  Random Forest vs MobileNetV2: 92.9%
+  Unanimous 4-Way Consensus   : 78.6%
+
+Accuracy vs Reference Ground Truth:
+  Rule-Based Engine : 85.7%
+  Random Forest     : 100.0%
+  SVM               : 100.0%
+  MobileNetV2       : 92.9%

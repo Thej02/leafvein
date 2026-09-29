@@ -210,5 +210,6 @@ class TestExtractAllFeatures:
             'vein_pixel_count', 'leaf_area_pixels',
             'mean_hue', 'mean_saturation', 'yellow_pixel_ratio',
             'excess_green_index', 'dgci', 'interveinal_contrast',
+            'color_spatial_variance', 'masks',
         }
         assert set(features.keys()) == expected_keys

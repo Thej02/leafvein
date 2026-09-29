@@ -30,11 +30,11 @@ from config.thresholds import (
 def _healthy_features():
     """Return a feature dict representing a clearly healthy leaf."""
     return {
-        'vein_density': 0.05,               # above threshold
-        'vein_thickness_avg': 7.0,          # below high threshold
+        'vein_density': 0.06,               # above threshold (0.0502)
+        'vein_thickness_avg': 7.0,          # below high threshold (7.65)
         'yellow_pixel_ratio': 0.05,         # minimal yellow
         'excess_green_index': 0.65,         # good green
-        'dgci': 0.55,                       # good DGCI
+        'dgci': 0.65,                       # good DGCI (above DGCI_HEALTHY_LOW 0.595)
         'interveinal_contrast': 30.0,       # below threshold
         'color_spatial_variance': 400.0,    # below threshold
     }

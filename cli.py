@@ -74,6 +74,10 @@ def main():
         '--select-roi', action='store_true',
         help='Interactively draw a circle to select the region of interest.'
     )
+    parser.add_argument(
+        '--no-display', action='store_true',
+        help='Skip displaying GUI popup window for vein overlay confirmation.'
+    )
 
     args = parser.parse_args()
 
@@ -114,6 +118,7 @@ def main():
                 output_dir=args.output,
                 save_debug=not args.no_debug,
                 use_interactive_roi=args.select_roi,
+                display_overlay=not args.no_display,
             )
         else:
             result = run_pipeline_single_image(
@@ -122,6 +127,7 @@ def main():
                 output_dir=args.output,
                 save_debug=not args.no_debug,
                 use_interactive_roi=args.select_roi,
+                display_overlay=not args.no_display,
             )
 
         # Print the full text report

@@ -45,7 +45,8 @@ def run_pipeline(backlit_path: str,
                   image_id: str = None,
                   output_dir: str = None,
                   save_debug: bool = True,
-                  use_interactive_roi: bool = False) -> dict:
+                  use_interactive_roi: bool = False,
+                  display_overlay: bool = True) -> dict:
     """
     Run the complete leaf health analysis pipeline.
 
@@ -163,16 +164,18 @@ def run_pipeline(backlit_path: str,
         cv2.imwrite(overlay_path, vein_result['debug_overlay'])
         output_files.append(overlay_path)
 
-    print(f"       Displaying vein overlay for visual confirmation...")
-    window_name = "Vein Skeleton Confirmation (Press any key to continue)"
-    cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
-    cv2.imshow(window_name, vein_result['debug_overlay'])
-    cv2.waitKey(0)
-    try:
-        if cv2.getWindowProperty(window_name, cv2.WND_PROP_VISIBLE) >= 1:
-            cv2.destroyWindow(window_name)
-    except cv2.error:
-        pass
+    should_display = display_overlay and os.environ.get('HEADLESS', '').lower() not in ('1', 'true', 'yes')
+    if should_display:
+        print(f"       Displaying vein overlay for visual confirmation...")
+        window_name = "Vein Skeleton Confirmation (Press any key to continue)"
+        cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+        cv2.imshow(window_name, vein_result['debug_overlay'])
+        cv2.waitKey(0)
+        try:
+            if cv2.getWindowProperty(window_name, cv2.WND_PROP_VISIBLE) >= 1:
+                cv2.destroyWindow(window_name)
+        except cv2.error:
+            pass
 
     # ── Step 4: Extract features ──────────────────────────────────────
     print(f"[4/6] Computing feature values...")
@@ -250,7 +253,8 @@ def run_pipeline_single_image(image_path: str,
                                 image_id: str = None,
                                 output_dir: str = None,
                                 save_debug: bool = True,
-                                use_interactive_roi: bool = False) -> dict:
+                                use_interactive_roi: bool = False,
+                                display_overlay: bool = True) -> dict:
     """
     Run the pipeline using a single image for both backlit and front-lit analysis.
 
@@ -266,6 +270,8 @@ def run_pipeline_single_image(image_path: str,
         image_id: Optional identifier. Defaults to filename stem.
         output_dir: Directory for output files.
         save_debug: Whether to save debug images.
+        use_interactive_roi: Whether to interactively select circle ROI.
+        display_overlay: Whether to display vein overlay popup.
 
     Returns:
         Same result dict as run_pipeline().
@@ -273,4 +279,4 @@ def run_pipeline_single_image(image_path: str,
     print("NOTE: Single-image mode — using same image for both vein and color analysis.")
     print("      For best results, capture separate backlit and front-lit images.")
     print("")
-    return run_pipeline(image_path, image_path, image_id, output_dir, save_debug, use_interactive_roi)
+    return run_pipeline(image_path, image_path, image_id, output_dir, save_debug, use_interactive_roi, display_overlay)

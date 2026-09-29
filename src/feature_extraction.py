@@ -123,7 +123,8 @@ def compute_mean_hue_saturation(image: np.ndarray, mask: np.ndarray) -> dict:
 
 def compute_yellow_pixel_ratio(image: np.ndarray, mask: np.ndarray,
                                 yellow_lower: tuple = YELLOW_HSV_LOWER,
-                                yellow_upper: tuple = YELLOW_HSV_UPPER) -> float:
+                                yellow_upper: tuple = YELLOW_HSV_UPPER,
+                                return_mask: bool = False):
     """
     Compute the fraction of leaf pixels that fall in the "yellow/pale" HSV band.
 
@@ -135,13 +136,15 @@ def compute_yellow_pixel_ratio(image: np.ndarray, mask: np.ndarray,
         mask: Binary leaf mask (uint8, 0 or 255).
         yellow_lower: Lower HSV bound for yellow detection.
         yellow_upper: Upper HSV bound for yellow detection.
+        return_mask: If True, also return the binary yellow mask.
 
     Returns:
-        Ratio of yellow pixels to total leaf pixels (0.0 to 1.0).
+        Ratio of yellow pixels to total leaf pixels (0.0 to 1.0),
+        or (ratio, yellow_mask) if return_mask is True.
     """
     leaf_area = cv2.countNonZero(mask)
     if leaf_area == 0:
-        return 0.0
+        return (0.0, np.zeros_like(mask)) if return_mask else 0.0
 
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     yellow_mask = cv2.inRange(hsv, np.array(yellow_lower), np.array(yellow_upper))
@@ -150,10 +153,12 @@ def compute_yellow_pixel_ratio(image: np.ndarray, mask: np.ndarray,
     yellow_in_leaf = cv2.bitwise_and(yellow_mask, mask)
     yellow_count = cv2.countNonZero(yellow_in_leaf)
 
-    return yellow_count / leaf_area, yellow_in_leaf
+    ratio = yellow_count / leaf_area
+    return (ratio, yellow_in_leaf) if return_mask else ratio
 
 
-def compute_excess_green_index(image: np.ndarray, mask: np.ndarray) -> float:
+def compute_excess_green_index(image: np.ndarray, mask: np.ndarray,
+                                return_mask: bool = False):
     """
     Compute the Excess Green Index (ExG) averaged over leaf pixels.
 
@@ -166,13 +171,15 @@ def compute_excess_green_index(image: np.ndarray, mask: np.ndarray) -> float:
     Args:
         image: Front-lit BGR image.
         mask: Binary leaf mask (uint8, 0 or 255).
+        return_mask: If True, also return the binary failing mask.
 
     Returns:
-        Mean ExG across leaf pixels (typically -1.0 to +1.0).
+        Mean ExG across leaf pixels (typically -1.0 to +1.0),
+        or (mean_exg, exg_mask) if return_mask is True.
     """
     leaf_pixels = mask > 0
     if not np.any(leaf_pixels):
-        return 0.0
+        return (0.0, np.zeros_like(mask)) if return_mask else 0.0
 
     # Extract BGR channels as float
     b = image[:, :, 0].astype(np.float64)
@@ -194,10 +201,12 @@ def compute_excess_green_index(image: np.ndarray, mask: np.ndarray) -> float:
     exg_mask[failing_pixels] = 255
 
     # Average over leaf pixels only
-    return float(np.mean(exg[leaf_pixels])), exg_mask
+    mean_val = float(np.mean(exg[leaf_pixels]))
+    return (mean_val, exg_mask) if return_mask else mean_val
 
 
-def compute_dgci(image: np.ndarray, mask: np.ndarray) -> float:
+def compute_dgci(image: np.ndarray, mask: np.ndarray,
+                 return_mask: bool = False):
     """
     Compute the Dark Green Color Index (DGCI) averaged over leaf pixels.
 
@@ -214,13 +223,15 @@ def compute_dgci(image: np.ndarray, mask: np.ndarray) -> float:
     Args:
         image: Front-lit BGR image.
         mask: Binary leaf mask (uint8, 0 or 255).
+        return_mask: If True, also return the binary failing mask.
 
     Returns:
-        Mean DGCI across leaf pixels (0.0 to 1.0, higher = darker green).
+        Mean DGCI across leaf pixels (0.0 to 1.0, higher = darker green),
+        or (mean_dgci, dgci_mask) if return_mask is True.
     """
     leaf_pixels = mask > 0
     if not np.any(leaf_pixels):
-        return 0.0
+        return (0.0, np.zeros_like(mask)) if return_mask else 0.0
 
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
@@ -241,7 +252,8 @@ def compute_dgci(image: np.ndarray, mask: np.ndarray) -> float:
     failing_pixels = (dgci < DGCI_HEALTHY_LOW) & leaf_pixels
     dgci_mask[failing_pixels] = 255
 
-    return float(np.mean(dgci[leaf_pixels])), dgci_mask
+    mean_val = float(np.mean(dgci[leaf_pixels]))
+    return (mean_val, dgci_mask) if return_mask else mean_val
 
 
 def compute_glare_mask(image: np.ndarray, mask: np.ndarray, v_thresh: int = 220, s_thresh: int = 40) -> np.ndarray:
@@ -279,7 +291,8 @@ def compute_interveinal_contrast(image: np.ndarray,
                                    mask: np.ndarray,
                                    skeleton: np.ndarray,
                                    glare_mask: np.ndarray = None,
-                                   dilation_radius: int = 10) -> float:
+                                   dilation_radius: int = 10,
+                                   return_mask: bool = False):
     """
     Compute the color contrast between on-vein and off-vein (interveinal) regions.
 
@@ -294,14 +307,15 @@ def compute_interveinal_contrast(image: np.ndarray,
         glare_mask: Optional binary mask of specular highlights to exclude.
         dilation_radius: How many pixels around each skeleton pixel to consider
                         as "on-vein" region.
+        return_mask: If True, also return the binary failing mask.
 
     Returns:
         Absolute difference in mean green-channel intensity between on-vein
         and off-vein leaf regions. Higher values suggest interveinal chlorosis.
-        Returns 0.0 if either region is empty.
+        Returns 0.0 (or (0.0, zero_mask)) if either region is empty.
     """
     if cv2.countNonZero(skeleton) == 0 or cv2.countNonZero(mask) == 0:
-        return 0.0
+        return (0.0, np.zeros_like(mask)) if return_mask else 0.0
 
     # Dilate skeleton to create "on-vein" region (wider than 1 pixel)
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,
@@ -324,7 +338,7 @@ def compute_interveinal_contrast(image: np.ndarray,
     off_vein_pixels = off_vein_mask > 0
 
     if not np.any(on_vein_pixels) or not np.any(off_vein_pixels):
-        return 0.0
+        return (0.0, np.zeros_like(mask)) if return_mask else 0.0
 
     # Compare green channel (index 1 in BGR)
     green = image[:, :, 1].astype(np.float64)
@@ -338,10 +352,12 @@ def compute_interveinal_contrast(image: np.ndarray,
     failing = (np.abs(green - mean_green_on_vein) > INTERVEINAL_CONTRAST_THRESHOLD) & off_vein_pixels
     contrast_mask[failing] = 255
 
-    return contrast, contrast_mask
+    return (contrast, contrast_mask) if return_mask else contrast
 
 
-def compute_color_spatial_variance(image: np.ndarray, mask: np.ndarray, glare_mask: np.ndarray = None) -> float:
+def compute_color_spatial_variance(image: np.ndarray, mask: np.ndarray,
+                                   glare_mask: np.ndarray = None,
+                                   return_mask: bool = False):
     """
     Compute spatial variance of color (hue and value) across the leaf.
 
@@ -354,9 +370,11 @@ def compute_color_spatial_variance(image: np.ndarray, mask: np.ndarray, glare_ma
         image: Front-lit BGR image.
         mask: Binary leaf mask (uint8, 0 or 255).
         glare_mask: Optional binary mask of specular highlights to exclude.
+        return_mask: If True, also return the binary failing mask.
 
     Returns:
-        Sum of hue variance and value (lightness) variance.
+        Sum of hue variance and value (lightness) variance, or (global_variance, var_mask)
+        if return_mask is True.
     """
     if glare_mask is not None:
         effective_mask = cv2.bitwise_and(mask, cv2.bitwise_not(glare_mask))
@@ -365,7 +383,7 @@ def compute_color_spatial_variance(image: np.ndarray, mask: np.ndarray, glare_ma
 
     leaf_pixels = effective_mask > 0
     if not np.any(leaf_pixels):
-        return 0.0
+        return (0.0, np.zeros_like(mask)) if return_mask else 0.0
 
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     
@@ -394,7 +412,7 @@ def compute_color_spatial_variance(image: np.ndarray, mask: np.ndarray, glare_ma
     failing = (local_variance > COLOR_SPATIAL_VARIANCE_MAX) & leaf_pixels
     var_mask[failing] = 255
 
-    return global_variance, var_mask
+    return (global_variance, var_mask) if return_mask else global_variance
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Combined feature extraction
@@ -429,17 +447,19 @@ def extract_all_features(frontlit_image: np.ndarray,
 
     # Color features (from front-lit image)
     hue_sat = compute_mean_hue_saturation(frontlit_image, mask)
-    yellow_ratio, yellow_mask = compute_yellow_pixel_ratio(frontlit_image, mask)
-    exg, exg_mask = compute_excess_green_index(frontlit_image, mask)
-    dgci, dgci_mask = compute_dgci(frontlit_image, mask)
+    yellow_ratio, yellow_mask = compute_yellow_pixel_ratio(frontlit_image, mask, return_mask=True)
+    exg, exg_mask = compute_excess_green_index(frontlit_image, mask, return_mask=True)
+    dgci, dgci_mask = compute_dgci(frontlit_image, mask, return_mask=True)
     
     # Calculate glare mask for spatial features
     glare_mask = compute_glare_mask(frontlit_image, mask)
     
     interveinal, interveinal_mask = compute_interveinal_contrast(
-        frontlit_image, mask, vein_result['skeleton'], glare_mask=glare_mask
+        frontlit_image, mask, vein_result['skeleton'], glare_mask=glare_mask, return_mask=True
     )
-    spatial_variance, variance_mask = compute_color_spatial_variance(frontlit_image, mask, glare_mask=glare_mask)
+    spatial_variance, variance_mask = compute_color_spatial_variance(
+        frontlit_image, mask, glare_mask=glare_mask, return_mask=True
+    )
 
     return {
         # Vein features

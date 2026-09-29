@@ -28,6 +28,23 @@ class TestSpeciesCheck(unittest.TestCase):
         self.assertFalse(result['is_hibiscus'])
         self.assertIn("Aspect ratio", result['reason'])
 
+    def test_verify_hibiscus_species_mango_rejected(self):
+        # Load and segment mango leaf image to verify it gets rejected
+        from src.preprocessing import load_image, resize_to_working_resolution, denoise, normalize_brightness
+        from src.segmentation import segment_leaf
+        
+        mango_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../data/raw/mango.jpeg'))
+        if os.path.exists(mango_path):
+            raw = load_image(mango_path)
+            resized = resize_to_working_resolution(raw)
+            denoised = denoise(resized)
+            normalized = normalize_brightness(denoised)
+            mask = segment_leaf(normalized)['mask']
+            
+            result = verify_hibiscus_species(mask)
+            self.assertFalse(result['is_hibiscus'])
+            self.assertIn("Not a Hibiscus plant/leaf. Image rejected.", result['reason'])
+
     @patch('src.pipeline.verify_hibiscus_species')
     @patch('src.pipeline.extract_veins')
     @patch('src.pipeline.extract_all_features')

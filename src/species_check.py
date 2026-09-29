@@ -49,22 +49,22 @@ def verify_hibiscus_species(mask: np.ndarray) -> dict:
     # Solidity: Margins are serrated but overall shape is solid (not deeply lobed like maple)
     # Extent: Fills a reasonable portion of its bounding box
     
-    if not (1.05 <= aspect_ratio <= 3.0):
+    if not (1.05 <= aspect_ratio <= 2.4):
         return {
             'is_hibiscus': False, 
-            'reason': f'Aspect ratio ({aspect_ratio:.2f}) out of range for Hibiscus rosa-sinensis.'
+            'reason': f'Not a Hibiscus plant/leaf. Image rejected. Aspect ratio ({aspect_ratio:.2f}) out of range for Hibiscus rosa-sinensis.'
         }
         
     if solidity < 0.70:
         return {
             'is_hibiscus': False, 
-            'reason': f'Leaf solidity ({solidity:.2f}) too low (indicates deep lobes or non-Hibiscus shape).'
+            'reason': f'Not a Hibiscus plant/leaf. Image rejected. Leaf solidity ({solidity:.2f}) too low (indicates deep lobes or non-Hibiscus shape).'
         }
         
     if extent < 0.40:
         return {
             'is_hibiscus': False, 
-            'reason': f'Leaf extent ({extent:.2f}) too low.'
+            'reason': f'Not a Hibiscus plant/leaf. Image rejected. Leaf extent ({extent:.2f}) too low.'
         }
         
     return {
