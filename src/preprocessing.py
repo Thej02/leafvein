@@ -151,3 +151,53 @@ def preprocess_from_path(image_path: str) -> np.ndarray:
     """
     raw = load_image(image_path)
     return preprocess(raw)
+
+
+def get_image_stem(image_path: str) -> str:
+    """
+    Extract clean image ID/name from path, stripping directory, file extension,
+    and common acquisition protocol suffixes (e.g., _backlit, _frontlit).
+    """
+    if not image_path:
+        return "leaf_image"
+    stem = os.path.splitext(os.path.basename(image_path))[0]
+    for suffix in ['_backlit', '_frontlit', '_back', '_front']:
+        if stem.endswith(suffix):
+            stem = stem[:-len(suffix)]
+            break
+    return stem
+
+
+def print_preprocessed_stages_summary(prep_dir: str):
+    """
+    Display a formatted console table of all 12 preprocessing stages saved
+    in the image directory.
+    """
+    stage_names = [
+        ("01_raw.jpg", "Raw input image"),
+        ("02_resized.jpg", "Resized to standard working resolution"),
+        ("03_denoised.jpg", "Non-local means bilateral denoising"),
+        ("04_normalized.jpg", "Brightness & CLAHE normalization"),
+        ("05_leaf_mask.jpg", "Binary leaf segmentation mask"),
+        ("06_gray_masked.jpg", "Grayscale leaf lamina"),
+        ("07_local_enhanced.jpg", "Local CLAHE contrast enhancement"),
+        ("08_adaptive_veins.jpg", "Adaptive Gaussian threshold veins"),
+        ("09_frangi_veins.jpg", "Frangi vesselness filter ridges"),
+        ("10_combined_veins.jpg", "Morphological union & closing"),
+        ("11_skeleton.jpg", "1-pixel morphological vein skeleton"),
+        ("12_vein_overlay.jpg", "Vein skeleton debug overlay on leaf"),
+    ]
+    print("\n" + "=" * 72)
+    print(f"  PREPROCESSING STAGES DISPLAY (Saved to: {prep_dir})")
+    print("=" * 72)
+    saved_count = 0
+    for fname, desc in stage_names:
+        fpath = os.path.join(prep_dir, fname)
+        if os.path.exists(fpath):
+            status = "[SAVED]"
+            saved_count += 1
+        else:
+            status = "[MISSING]"
+        print(f"  {status} {fname:<24} - {desc}")
+    print(f"  Total stages saved: {saved_count}/12")
+    print("=" * 72 + "\n")

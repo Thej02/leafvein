@@ -135,7 +135,13 @@ def main():
         print(result['report_text'])
 
         # Summary of saved files
-        if result['output_files']:
+        if result.get('preprocessed_dir'):
+            print("")
+            print(f"Preprocessed Stages (12) saved in: {result['preprocessed_dir']}")
+            for path in result.get('preprocessed_files', []):
+                print(f"  -> {path}")
+
+        if result.get('output_files'):
             print("")
             print(f"Saved {len(result['output_files'])} output file(s):")
             for path in result['output_files']:

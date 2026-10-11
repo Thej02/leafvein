@@ -29,6 +29,8 @@ from src.preprocessing import (
     resize_to_working_resolution,
     denoise,
     normalize_brightness,
+    get_image_stem,
+    print_preprocessed_stages_summary,
 )
 from src.interactive_roi import select_circle_roi
 from src.segmentation import segment_leaf
@@ -224,17 +226,30 @@ def analyze_image_severity(image_path: str,
     prep_front = normalize_brightness(denoised_front)
     prep_back = normalize_brightness(denoised_back)
 
+    # Save preprocessing stages
+    img_stem = get_image_stem(image_path)
+    prep_dir = os.path.join("preprocessed_images", img_stem)
+    os.makedirs(prep_dir, exist_ok=True)
+    cv2.imwrite(os.path.join(prep_dir, "01_raw.jpg"), raw_back)
+    cv2.imwrite(os.path.join(prep_dir, "02_resized.jpg"), resized_back)
+    cv2.imwrite(os.path.join(prep_dir, "03_denoised.jpg"), denoised_back)
+    cv2.imwrite(os.path.join(prep_dir, "04_normalized.jpg"), prep_back)
+
     # Step 2: Segmentation & Species Check
     print("[2/5] Segmenting leaf and verifying species...")
     seg_res = segment_leaf(prep_front)
     mask = seg_res['mask']
+    cv2.imwrite(os.path.join(prep_dir, "05_leaf_mask.jpg"), mask)
 
     species_res = verify_hibiscus_species(mask)
     if not species_res['is_hibiscus']:
+        extract_veins(prep_back, mask, save_stages_dir=prep_dir)
+        print_preprocessed_stages_summary(prep_dir)
         return {
             'error': f"Species check rejected: {species_res['reason']}",
             'is_hibiscus': False,
-            'image_path': image_path
+            'image_path': image_path,
+            'prep_dir': prep_dir
         }
     print("      Species Check: Verified Hibiscus (Rosa-sinensis).")
 
@@ -243,13 +258,15 @@ def analyze_image_severity(image_path: str,
         print("       Opening interactive ROI selection window...")
         roi_mask = select_circle_roi(resized_front)
         mask = cv2.bitwise_and(mask, roi_mask)
+        cv2.imwrite(os.path.join(prep_dir, "05_leaf_mask.jpg"), mask)
 
     leaf_area = cv2.countNonZero(mask)
     print(f"      Effective Leaf Area: {leaf_area:,} pixels")
 
     # Step 3: Vein extraction
     print("[3/5] Extracting vein architecture...")
-    vein_res = extract_veins(prep_back, mask)
+    vein_res = extract_veins(prep_back, mask, save_stages_dir=prep_dir)
+    print_preprocessed_stages_summary(prep_dir)
 
     # Display vein overlay confirmation window
     should_display = display_overlay and os.environ.get('HEADLESS', '').lower() not in ('1', 'true', 'yes')

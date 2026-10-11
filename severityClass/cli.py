@@ -43,6 +43,8 @@ from src.preprocessing import (
     resize_to_working_resolution,
     denoise,
     normalize_brightness,
+    get_image_stem,
+    print_preprocessed_stages_summary,
 )
 from src.segmentation import segment_leaf
 from src.species_check import verify_hibiscus_species
@@ -99,18 +101,39 @@ def run_severity_pipeline(
     prep_back = normalize_brightness(denoised_back)
     print("      Preprocessing complete (denoised & normalized).")
 
+    # Create image-specific folder inside preprocessed_images
+    img_stem = get_image_stem(f_path)
+    prep_dir = os.path.join("preprocessed_images", img_stem)
+    os.makedirs(prep_dir, exist_ok=True)
+    cv2.imwrite(os.path.join(prep_dir, "01_raw.jpg"), raw_back)
+    cv2.imwrite(os.path.join(prep_dir, "02_resized.jpg"), resized_back)
+    cv2.imwrite(os.path.join(prep_dir, "03_denoised.jpg"), denoised_back)
+    cv2.imwrite(os.path.join(prep_dir, "04_normalized.jpg"), prep_back)
+
     # ── Step 2: Species Check (Hard Gate) ──────────────────────────────
     print("\n[2/6] Segmenting leaf and verifying Hibiscus species...")
     seg_res = segment_leaf(prep_front)
     initial_mask = seg_res['mask']
+    cv2.imwrite(os.path.join(prep_dir, "05_leaf_mask.jpg"), initial_mask)
 
     species_res = verify_hibiscus_species(initial_mask)
     if not species_res['is_hibiscus']:
         print(f"      [X] Species Check REJECTED: {species_res['reason']}")
+        extract_veins(prep_back, initial_mask, save_stages_dir=prep_dir)
+        print_preprocessed_stages_summary(prep_dir)
         return {
             'is_hibiscus': False,
             'reason': species_res['reason'],
             'image_path': f_path,
+            'prep_dir': prep_dir,
+            'preprocessed_files': [
+                os.path.join(prep_dir, fn) for fn in [
+                    "01_raw.jpg", "02_resized.jpg", "03_denoised.jpg", "04_normalized.jpg",
+                    "05_leaf_mask.jpg", "06_gray_masked.jpg", "07_local_enhanced.jpg",
+                    "08_adaptive_veins.jpg", "09_frangi_veins.jpg", "10_combined_veins.jpg",
+                    "11_skeleton.jpg", "12_vein_overlay.jpg"
+                ] if os.path.exists(os.path.join(prep_dir, fn))
+            ],
         }
     print("      [OK] Species Verified: Hibiscus rosa-sinensis.")
 
@@ -123,6 +146,7 @@ def run_severity_pipeline(
         print("      >> Press ENTER or SPACE to confirm, or ESC to select full leaf.")
         roi_mask = select_circle_roi(resized_front)
         mask = cv2.bitwise_and(initial_mask, roi_mask)
+        cv2.imwrite(os.path.join(prep_dir, "05_leaf_mask.jpg"), mask)
         print("      ROI mask successfully applied.")
     else:
         print("\n[3/6] Skipping interactive ROI (using full segmented leaf lamina).")
@@ -132,9 +156,10 @@ def run_severity_pipeline(
 
     # ── Step 4: Vein Extraction ────────────────────────────────────────
     print("\n[4/6] Extracting vein architecture from transmitted light...")
-    vein_res = extract_veins(prep_back, mask)
+    vein_res = extract_veins(prep_back, mask, save_stages_dir=prep_dir)
     print(f"      Vein Pixels Detected: {vein_res['vein_pixel_count']:,}")
     print(f"      Branch Junctions:     {vein_res['branch_point_count']}")
+    print_preprocessed_stages_summary(prep_dir)
 
     # ── Step 5: Vein Overlay Visual Confirmation ───────────────────────
     if display_overlay:
@@ -208,6 +233,17 @@ def run_severity_pipeline(
 
         cv2.imwrite(annotated_path, overlay)
 
+    stage_file_names = [
+        "01_raw.jpg", "02_resized.jpg", "03_denoised.jpg", "04_normalized.jpg",
+        "05_leaf_mask.jpg", "06_gray_masked.jpg", "07_local_enhanced.jpg",
+        "08_adaptive_veins.jpg", "09_frangi_veins.jpg", "10_combined_veins.jpg",
+        "11_skeleton.jpg", "12_vein_overlay.jpg"
+    ]
+    prep_files = [
+        os.path.join(prep_dir, fn) for fn in stage_file_names
+        if os.path.exists(os.path.join(prep_dir, fn))
+    ]
+
     return {
         'is_hibiscus': True,
         'image_path': f_path,
@@ -217,6 +253,8 @@ def run_severity_pipeline(
         'ml_result': ml_result,
         'dl_result': dl_result,
         'annotated_path': annotated_path,
+        'prep_dir': prep_dir,
+        'preprocessed_files': prep_files,
     }
 
 
@@ -226,6 +264,8 @@ def print_results(res: Dict[str, Any]):
         print("\n" + "=" * 72)
         print(f"  [X] ANALYSIS TERMINATED: Not Hibiscus rosa-sinensis")
         print(f"  Reason: {res.get('reason')}")
+        if res.get('prep_dir'):
+            print(f"  Preprocessed stages saved to: {res['prep_dir']}")
         print("=" * 72)
         return
 
@@ -271,6 +311,12 @@ def print_results(res: Dict[str, Any]):
     print("  Recommended Actions:")
     for step in rec['actions']:
         print(f"    * {step}")
+
+    if res.get('prep_dir'):
+        print("-" * 72)
+        print(f"Preprocessed Stages (12) saved in: {res['prep_dir']}")
+        for p in res.get('preprocessed_files', []):
+            print(f"  -> {p}")
 
     if res.get('annotated_path'):
         print("-" * 72)

@@ -23,7 +23,9 @@ from src.preprocessing import (
     resize_to_working_resolution,
     denoise,
     normalize_brightness,
-    preprocess
+    preprocess,
+    get_image_stem,
+    print_preprocessed_stages_summary
 )
 from src.segmentation import segment_leaf
 from src.species_check import verify_hibiscus_species
@@ -71,12 +73,7 @@ def run_pipeline(backlit_path: str,
 
     # Default image ID from filename
     if image_id is None:
-        image_id = os.path.splitext(os.path.basename(backlit_path))[0]
-        # Strip common suffixes
-        for suffix in ['_backlit', '_frontlit', '_back', '_front']:
-            if image_id.endswith(suffix):
-                image_id = image_id[:-len(suffix)]
-                break
+        image_id = get_image_stem(frontlit_path if frontlit_path else backlit_path)
 
     # ── Step 1: Load and preprocess ────────────────────────────────────
     print(f"[1/6] Loading and preprocessing images...")
@@ -110,6 +107,7 @@ def run_pipeline(backlit_path: str,
     seg_result = segment_leaf(frontlit_preprocessed)
     mask = seg_result['mask']
     validation = seg_result['validation']
+    cv2.imwrite(os.path.join(prep_dir, "05_leaf_mask.jpg"), mask)
 
     if not validation['valid']:
         for issue in validation['issues']:
@@ -138,8 +136,7 @@ def run_pipeline(backlit_path: str,
         print(f"       Opening interactive ROI selection window...")
         roi_mask = select_circle_roi(frontlit_resized)
         mask = cv2.bitwise_and(mask, roi_mask)
-        
-    cv2.imwrite(os.path.join(prep_dir, "05_leaf_mask.jpg"), mask)
+        cv2.imwrite(os.path.join(prep_dir, "05_leaf_mask.jpg"), mask)
 
     leaf_area = cv2.countNonZero(mask)
     
@@ -153,6 +150,7 @@ def run_pipeline(backlit_path: str,
     print(f"[3/6] Extracting vein architecture from backlit image...")
 
     vein_result = extract_veins(backlit_preprocessed, mask, save_stages_dir=prep_dir)
+    print_preprocessed_stages_summary(prep_dir)
 
     print(f"       Vein pixels: {vein_result['vein_pixel_count']:,}")
     print(f"       Branch points: {vein_result['branch_point_count']}")
@@ -239,6 +237,17 @@ def run_pipeline(backlit_path: str,
 
     print(f"\nDone. Verdict: {verdict_result['verdict']}")
 
+    stage_file_names = [
+        "01_raw.jpg", "02_resized.jpg", "03_denoised.jpg", "04_normalized.jpg",
+        "05_leaf_mask.jpg", "06_gray_masked.jpg", "07_local_enhanced.jpg",
+        "08_adaptive_veins.jpg", "09_frangi_veins.jpg", "10_combined_veins.jpg",
+        "11_skeleton.jpg", "12_vein_overlay.jpg"
+    ]
+    preprocessed_files = [
+        os.path.join(prep_dir, fn) for fn in stage_file_names
+        if os.path.exists(os.path.join(prep_dir, fn))
+    ]
+
     return {
         'image_id': image_id,
         'features': features,
@@ -246,6 +255,8 @@ def run_pipeline(backlit_path: str,
         'segmentation_validation': validation,
         'report_text': report_text,
         'output_files': output_files,
+        'preprocessed_dir': prep_dir,
+        'preprocessed_files': preprocessed_files,
     }
 
 

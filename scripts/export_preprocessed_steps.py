@@ -16,11 +16,15 @@ from skimage.filters import frangi
 # Add project root to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+import argparse
+
 from src.preprocessing import (
     load_image,
     resize_to_working_resolution,
     denoise,
     normalize_brightness,
+    get_image_stem,
+    print_preprocessed_stages_summary,
 )
 from src.segmentation import segment_leaf
 from src.vein_extraction import (
@@ -33,16 +37,26 @@ from src.vein_extraction import (
 )
 
 def main():
-    # Input image path
-    input_path = os.path.join("data", "raw", "1.jpeg")
-    if not os.path.exists(input_path):
-        input_path = os.path.join("sample_images", "1.jpeg")
-        
-    if not os.path.exists(input_path):
+    parser = argparse.ArgumentParser(
+        description="Processes a leaf image step-by-step through all 12 preprocessing stages, saving them to preprocessed_images/<image_name>/."
+    )
+    parser.add_argument("image", nargs="?", default=None, help="Path to input leaf image")
+    parser.add_argument("--image", "-i", dest="image_opt", default=None, help="Path to input leaf image")
+    args = parser.parse_args()
+
+    input_path = args.image or args.image_opt
+    if not input_path:
+        for candidate in [os.path.join("data", "raw", "1.jpeg"), os.path.join("sample_images", "1.jpeg")]:
+            if os.path.exists(candidate):
+                input_path = candidate
+                break
+
+    if not input_path or not os.path.exists(input_path):
         print(f"Error: Could not find sample image at {input_path}")
         sys.exit(1)
-        
-    output_dir = "preprocessed_images"
+
+    image_name = get_image_stem(input_path)
+    output_dir = os.path.join("preprocessed_images", image_name)
     os.makedirs(output_dir, exist_ok=True)
     
     print(f"Loading raw image from: {input_path}")
@@ -95,7 +109,8 @@ def main():
     overlay = create_debug_overlay(normalized_img, skeleton, mask)
     cv2.imwrite(os.path.join(output_dir, "12_vein_overlay.jpg"), overlay)
     
-    print(f"Done! Saved 12 transformation stages to the folder: '{output_dir}'")
+    print_preprocessed_stages_summary(output_dir)
+    print(f"Done! Successfully saved all 12 transformation stages to: '{output_dir}'")
 
 if __name__ == "__main__":
     main()
