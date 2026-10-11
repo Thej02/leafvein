@@ -30,22 +30,39 @@ def select_circle_roi(image: np.ndarray) -> np.ndarray:
         if event == cv2.EVENT_LBUTTONDOWN:
             drawing = True
             pts = [(x, y)]
-            # Draw a small dot at the starting point
-            cv2.circle(display_img, (x, y), 3, (0, 0, 255), -1)
+            # Reset to fresh image for clean redraw
+            display_img = image.copy()
+            # Draw prominent starting point (dark border + bright neon yellow center)
+            cv2.circle(display_img, (x, y), 6, (0, 0, 0), -1)
+            cv2.circle(display_img, (x, y), 4, (0, 255, 255), -1)
+            cv2.imshow(window_name, display_img)
             
         elif event == cv2.EVENT_MOUSEMOVE:
-            if drawing:
+            # Draw if left button is being dragged
+            if drawing or (flags & cv2.EVENT_FLAG_LBUTTON and len(pts) > 0):
+                drawing = True
                 pts.append((x, y))
-                # Draw a line from the last point to the current point
-                cv2.line(display_img, pts[-2], pts[-1], (0, 0, 255), 3)
+                # High-contrast dual stroke: thick black backing + vivid neon yellow line
+                cv2.line(display_img, pts[-2], pts[-1], (0, 0, 0), 5, cv2.LINE_AA)
+                cv2.line(display_img, pts[-2], pts[-1], (0, 255, 255), 3, cv2.LINE_AA)
+                cv2.imshow(window_name, display_img)
                 
         elif event == cv2.EVENT_LBUTTONUP:
             drawing = False
             if len(pts) > 2:
-                # Close the polygon visually
-                cv2.line(display_img, pts[-1], pts[0], (0, 0, 255), 3)
+                # Close the polygon with high-contrast line
+                cv2.line(display_img, pts[-1], pts[0], (0, 0, 0), 5, cv2.LINE_AA)
+                cv2.line(display_img, pts[-1], pts[0], (0, 255, 255), 3, cv2.LINE_AA)
+                
+                # Show subtle translucent fill to highlight selected ROI
+                overlay = display_img.copy()
+                poly_pts = np.array(pts, dtype=np.int32)
+                cv2.fillPoly(overlay, [poly_pts], (0, 255, 255))
+                cv2.addWeighted(overlay, 0.25, display_img, 0.75, 0, display_img)
+                cv2.polylines(display_img, [poly_pts], isClosed=True, color=(0, 255, 255), thickness=3, lineType=cv2.LINE_AA)
+                cv2.imshow(window_name, display_img)
 
-    window_name = "Select ROI (Click & drag to draw freehand shape, ENTER to confirm, ESC to cancel)"
+    window_name = "Select ROI (Click & drag freehand line, ENTER to confirm, ESC for full leaf)"
     cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
     cv2.setMouseCallback(window_name, draw_lasso)
 
@@ -54,7 +71,7 @@ def select_circle_roi(image: np.ndarray) -> np.ndarray:
 
     while True:
         cv2.imshow(window_name, display_img)
-        key = cv2.waitKey(1) & 0xFF
+        key = cv2.waitKey(20) & 0xFF
         
         # ENTER or SPACE to confirm
         if key == 13 or key == 32:

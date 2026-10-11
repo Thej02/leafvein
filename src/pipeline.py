@@ -114,9 +114,9 @@ def run_pipeline(backlit_path: str,
             print(f"       ! {issue}")
 
     # ── Step 1.5: Species Check (Hard Gate) ───────────────────────────
-    species_res = verify_hibiscus_species(mask)
+    species_res = verify_hibiscus_species(mask, image_path=frontlit_path)
     if not species_res['is_hibiscus']:
-        print("Species Check: The leaf is NOT Hibiscus (Rosa-sinensis). Analysis aborted.")
+        print("Species Check Failed: The leaf is NOT Hibiscus (Rosa-sinensis). Analysis aborted.")
         print(f"       Reason: {species_res['reason']}")
         return {
             'image_id': image_id,
